@@ -40,7 +40,7 @@ end -- }}}
 
 M._ensure_buf_exists = function() -- {{{
     if not M._tree_buffer or not v.nvim_buf_is_valid(M._tree_buffer) then
-        M._tree_buffer = v.nvim_create_buf(false, false)
+        M._tree_buffer = v.nvim_create_buf(false, true)
         M._setup_buffer_keys()
         v.nvim_buf_set_option(M._tree_buffer, "modifiable", false)
     end
