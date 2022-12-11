@@ -211,6 +211,9 @@ M.default_keys = function() -- {{{
         ["<Space>"] = M.open,
         ["l"]       = M.chroot_or_open,
         ["h"]       = M.chroot_backwards,
+        ["m"]       = M.new_file,
+        ["M"]       = M.new_dir,
+        ["q"]       = M.toggle_yaft,
     }
 end -- }}}
 
@@ -250,6 +253,14 @@ end
 
 M.chroot_backwards = function()
     local entry = M.get_current_entry()
+    print "TODO! Not implemented yet"
+end
+
+M.new_file = function()
+    print "TODO! Not implemented yet"
+end
+
+M.new_dir = function()
     print "TODO! Not implemented yet"
 end
 
