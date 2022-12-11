@@ -59,6 +59,8 @@ M._open_yaft_window = function(side, width) -- {{{
     if side == "right" then
         col = math.ceil(vim.o.columns - 20)
     end
+
+    M._old_window  = v.nvim_get_current_win()
     M._yaft_window = v.nvim_open_win(M._tree_buffer, true, {
         relative = "editor",
         col      = col,
@@ -151,23 +153,23 @@ M._create_subtree_from_dir = function(dir) -- {{{
     return subtree
 end -- }}}
 
-M._iterate_to_n_entry = function(cur, exp, subtree) -- {{{
+M._iterate_to_n_entry = function(cur, exp, subtree, fullpath) -- {{{
 
     for _, entry in pairs(subtree) do
         if cur == exp then
-            return cur, entry
+            return cur, entry, fullpath .. entry.name
         end
 
         cur = cur + 1
         if entry.class == "dir" and entry.opened then
-            cur, entry = M._iterate_to_n_entry(cur, exp, entry.children)
+            cur, entry, fullpath = M._iterate_to_n_entry(cur, exp, entry.children, fullpath .. entry.name)
             if entry then
-                return cur, entry
+                return cur, entry, fullpath
             end
         end
     end
 
-    return cur, nil
+    return cur, nil, nil
 end -- }}}
 
 -- }}}
