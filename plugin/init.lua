@@ -8,6 +8,8 @@ end
 
 g.autoloaded_yaft = true
 
+require "yaft".setup_keys(require "yaft".default_keys())
+
 command("YaftToggle", function(args)
     require "yaft".toggle_yaft(args.args)
 end, {

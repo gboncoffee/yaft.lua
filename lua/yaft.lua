@@ -10,6 +10,8 @@ hi! link YaftLnk Question
 hi! link YaftRoot Todo
 ]]
 
+-- init plugin {{{
+
 -- entry creator {{{
 -- (funny history: I could use metatables and stuff to emulate oop, but for
 -- some reason the table entries were messy, so I couldn't do that. but simply
@@ -26,9 +28,22 @@ end -- }}}
 
 M._tree = {}
 
+-- }}}
+
+-- low level plugin {{{
+
+M._setup_buffer_keys = function() -- {{{
+    print(vim.inspect(M._keys))
+    for key,func in pairs(M._keys) do
+        vim.keymap.set("n", key, func, { buffer = M._tree_buffer })
+        print "REACHED HERE"
+    end
+end -- }}}
+
 M._ensure_buf_exists = function() -- {{{
     if not M._tree_buffer or not v.nvim_buf_is_valid(M._tree_buffer) then
         M._tree_buffer = v.nvim_create_buf(false, false)
+        M._setup_buffer_keys()
         v.nvim_buf_set_option(M._tree_buffer, "modifiable", false)
     end
 end -- }}}
@@ -138,6 +153,8 @@ M._create_subtree_from_dir = function(dir) -- {{{
     return subtree
 end -- }}}
 
+-- }}}
+
 M.reload_yaft = function(root) -- {{{
     if (not root)
     or root == ""
@@ -169,5 +186,51 @@ M.toggle_yaft = function(root) -- {{{
         v.nvim_win_close(M._yaft_window, false)
     end
 end -- }}}
+
+M.default_keys = function() -- {{{
+    return {
+        ["<BS>"]    = M.delete_entry,
+        ["<CR>"]    = M.open,
+        ["<Space>"] = M.open,
+        ["l"]       = M.chroot_or_open,
+        ["h"]       = M.chroot_backwards,
+    }
+end -- }}}
+
+M.setup_keys = function(keys) -- {{{
+    if not M._keys then M._keys = {} end
+    for key, func in pairs(keys) do
+        M._keys[key] = func
+    end
+end -- }}}
+
+-- on-tree api {{{
+
+M.get_current_entry = function() -- {{{
+    local curpos = v.nvim_win_get_cursor(M._tree_buffer)[1]
+    print(curpos)
+end -- }}}
+
+M.open = function()
+    local entry = M.get_current_entry()
+    print "TODO! Not implemented yet"
+end
+
+M.delete_entry = function()
+    local entry = M.get_current_entry()
+    print "TODO! Not implemented yet"
+end
+
+M.chroot_or_open = function()
+    local entry = M.get_current_entry()
+    print "TODO! Not implemented yet"
+end
+
+M.chroot_backwards = function()
+    local entry = M.get_current_entry()
+    print "TODO! Not implemented yet"
+end
+
+-- }}}
 
 return M
