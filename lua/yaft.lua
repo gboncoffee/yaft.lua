@@ -34,6 +34,7 @@ M._ensure_buf_exists = function() -- {{{
 end -- }}}
 
 M._open_yaft_window = function(side, width) -- {{{
+    -- returns true if we open it, false if it was already opened
 
     if M._yaft_window and v.nvim_win_is_valid(M._yaft_window) then
         return false
@@ -57,11 +58,15 @@ M._open_yaft_window = function(side, width) -- {{{
 end -- }}}
 
 M._create_buffer_lines = function(pad, line, subtree) -- {{{
+    -- recursive because I like recursive things
+
     local padstr = ""
     for i = 0,pad do
         padstr = padstr .. "| "
     end
 
+    -- we use it to add an empty line if the dir is opened but have no children
+    -- (so making easy to see that it's actually opened)
     local actually_has_children = false
     for _, entry in ipairs(subtree) do
         actually_has_children = true
@@ -92,22 +97,28 @@ end -- }}}
 M._update_buffer = function() -- {{{
     M._ensure_buf_exists()
 
+    -- empty buffer
     v.nvim_buf_set_option(M._tree_buffer, "modifiable", true)
     v.nvim_buf_set_lines(M._tree_buffer, 0, -1, false, {})
 
     -- add root name
-    -- TODO: create highlight groups
     vim.fn.appendbufline(M._tree_buffer, 0, M._tree.name)
     v.nvim_buf_add_highlight(M._tree_buffer, -1, "YaftRoot", 0, 0, -1)
 
+    -- add other entries
     M._create_buffer_lines(0, 1, M._tree.tree)
 
+    -- remove the trailing last line
     v.nvim_buf_set_lines(M._tree_buffer, -2, -1, false, {})
 
     v.nvim_buf_set_option(M._tree_buffer, "modifiable", false)
 end -- }}}
 
 M._create_subtree_from_dir = function(dir) -- {{{
+    -- -F == append file indicator (*/=>@|)
+    -- -A == all without . and ..
+    -- -1 because for ocult forces the command was thinking that it was running
+    -- interactively
     local ls = io.popen("ls --group-directories-first -F -A -1 " .. dir)
     local subtree = {}
 
@@ -128,17 +139,32 @@ M._create_subtree_from_dir = function(dir) -- {{{
 end -- }}}
 
 M.reload_yaft = function(root) -- {{{
-    if not root then root = vim.fn.getcwd() end
+    if (not root)
+    or root == ""
+    or root == "."
+    then
+        root = vim.fn.getcwd()
+    end
+
+    -- recreates the root, adding name and then creating the tree itself
     M._tree.name = root
-    print(vim.inspect(M._tree.name))
     M._tree.tree = M._create_subtree_from_dir(M._tree.name)
     M._update_buffer()
+
+    -- make sure we update what the user see too, and go to the first line
+    local cur_win = v.nvim_get_current_win()
+    if cur_win == M._yaft_window then
+        vim.cmd("normal gg")
+    else
+        v.nvim_set_current_win(M._yaft_window)
+        vim.cmd("normal gg")
+        v.nvim_set_current_win(cur_win)
+    end
 end -- }}}
 
-M.toggle_yaft = function() -- {{{
+M.toggle_yaft = function(root) -- {{{
     if M._open_yaft_window("right", 20) then
-        M.reload_yaft()
-        vim.cmd("normal gg")
+        M.reload_yaft(root)
     else
         v.nvim_win_close(M._yaft_window, false)
     end
