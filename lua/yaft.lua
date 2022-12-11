@@ -33,10 +33,8 @@ M._tree = {}
 -- low level plugin {{{
 
 M._setup_buffer_keys = function() -- {{{
-    print(vim.inspect(M._keys))
     for key,func in pairs(M._keys) do
         vim.keymap.set("n", key, func, { buffer = M._tree_buffer })
-        print "REACHED HERE"
     end
 end -- }}}
 
@@ -153,6 +151,25 @@ M._create_subtree_from_dir = function(dir) -- {{{
     return subtree
 end -- }}}
 
+M._iterate_to_n_entry = function(cur, exp, subtree) -- {{{
+
+    for _, entry in pairs(subtree) do
+        if cur == exp then
+            return cur, entry
+        end
+
+        cur = cur + 1
+        if entry.class == "dir" and entry.opened then
+            cur, entry = M._iterate_to_n_entry(cur, exp, entry.children)
+            if entry then
+                return cur, entry
+            end
+        end
+    end
+
+    return cur, nil
+end -- }}}
+
 -- }}}
 
 M.reload_yaft = function(root) -- {{{
@@ -207,8 +224,13 @@ end -- }}}
 -- on-tree api {{{
 
 M.get_current_entry = function() -- {{{
-    local curpos = v.nvim_win_get_cursor(M._tree_buffer)[1]
-    print(curpos)
+    local curpos = vim.fn.getpos('.')[2] - 1
+    if curpos == 0 then
+        return nil
+    end
+
+    local cur, entry = M._iterate_to_n_entry(1, curpos, M._tree.tree)
+    return entry
 end -- }}}
 
 M.open = function()
