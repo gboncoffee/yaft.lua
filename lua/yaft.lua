@@ -172,7 +172,35 @@ M._iterate_to_n_entry = function(cur, exp, subtree, fullpath) -- {{{
     return cur, nil, nil
 end -- }}}
 
+M._get_first_usable_window = function() -- {{{
+    -- basically stolen and converted to Lua from the NERDTree ;)
+
+    for _, win in ipairs(v.nvim_list_wins()) do
+        local buf = v.nvim_win_get_buf(win)
+        if v.nvim_buf_get_option(buf, "buftype") == ""
+            and (not v.nvim_win_get_option(win, "previewwindow"))
+            and (not (v.nvim_buf_get_option(buf, "modified") and v.nvim_get_option("hidden")))
+            then
+            return win
+        end
+    end
+
+    return nil
+end -- }}}
+
 -- }}}
+
+-- api {{{
+
+M.get_current_entry = function() -- {{{
+    local curpos = vim.fn.getpos('.')[2] - 1
+    if curpos == 0 then
+        return nil, nil
+    end
+
+    local cur, entry, fullpath = M._iterate_to_n_entry(1, curpos, M._tree.tree, M._tree.name .. "/")
+    return entry, fullpath
+end -- }}}
 
 M.reload_yaft = function(root) -- {{{
     if (not root)
@@ -226,22 +254,30 @@ M.setup_keys = function(keys) -- {{{
     end
 end -- }}}
 
--- on-tree api {{{
+M.open = function() -- {{{
+    local entry, fullpath = M.get_current_entry()
 
-M.get_current_entry = function() -- {{{
-    local curpos = vim.fn.getpos('.')[2] - 1
-    if curpos == 0 then
-        return nil
+    if entry.class == "dir" then
+        print "TODO! Not implemented yet: DIR OPEN"
+        return
     end
 
-    local cur, entry = M._iterate_to_n_entry(1, curpos, M._tree.tree)
-    return entry
-end -- }}}
+    local win = nil
+    local cmd = "edit"
+    if v.nvim_win_is_valid(M._old_window) then
+        win = M._old_window
+    else
+        win = M._get_first_usable_window()
+        if win == nil then
+            win = v.nvim_list_wins()[1]
+            cmd = "split"
+        end
+    end
 
-M.open = function()
-    local entry = M.get_current_entry()
-    print "TODO! Not implemented yet"
-end
+    v.nvim_win_call(win, function()
+        vim.cmd(cmd .. " " .. fullpath)
+    end)
+end -- }}}
 
 M.delete_entry = function()
     local entry = M.get_current_entry()
