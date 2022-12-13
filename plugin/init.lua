@@ -11,7 +11,7 @@ g.autoloaded_yaft = true
 vim.cmd [[
 hi link YaftDir Directory
 hi link YaftExe Character
-hi link YaftLnk Question
+hi link YaftLink Question
 hi link YaftRoot Todo
 ]]
 

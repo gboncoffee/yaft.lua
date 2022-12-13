@@ -83,18 +83,27 @@ M._create_buffer_lines = function(pad, line, subtree) -- {{{
     for _, entry in ipairs(subtree) do
         actually_has_children = true
 
-        v.nvim_buf_set_lines(M._tree_buffer, line, line + 1, false, { padstr .. entry.name })
-        line = line + 1
+        local highlight = ""
+        local sufix     = ""
 
         if entry.class == "dir" then
-            v.nvim_buf_add_highlight(M._tree_buffer, -1, "YaftDir", line - 1, (pad + 1) * 2, -1)
-            if entry.opened then
-                line = M._create_buffer_lines(pad + 1, line, entry.children)
-            end
+            highlight = "YaftDir"
+            sufix     = "/"
         elseif entry.class == "exe" then
-            v.nvim_buf_add_highlight(M._tree_buffer, -1, "YaftExe", line - 1, (pad + 1) * 2, -1)
+            highlight = "YaftExe"
+            sufix     = "*"
         elseif entry.class == "link" then
-            v.nvim_buf_add_highlight(M._tree_buffer, -1, "YaftLnk", line - 1, (pad + 1) * 2, -1)
+            highlight = "YaftLink"
+            sufix     = "@"
+        end
+
+        v.nvim_buf_set_lines(M._tree_buffer, line, line + 1, false, { padstr .. entry.name .. sufix })
+        line = line + 1
+
+        v.nvim_buf_add_highlight(M._tree_buffer, -1, highlight, line - 1, (pad + 1) * 2, -1)
+
+        if entry.opened then
+            line = M._create_buffer_lines(pad + 1, line, entry.children)
         end
     end
 
@@ -113,7 +122,9 @@ M._update_buffer = function() -- {{{
     v.nvim_buf_set_option(M._tree_buffer, "modifiable", true)
 
     -- add root name
-    v.nvim_buf_set_lines(M._tree_buffer, 0, 1, false, { M._tree.name })
+    local rootname = M._tree.name
+    rootname = string.gsub(rootname, os.getenv("HOME"), "~")
+    v.nvim_buf_set_lines(M._tree_buffer, 0, 1, false, { rootname })
     v.nvim_buf_add_highlight(M._tree_buffer, -1, "YaftRoot", 0, 0, -1)
 
     -- add other entries
@@ -128,12 +139,13 @@ M._create_subtree_from_dir = function(dir) -- {{{
     -- -A == all without . and ..
     -- -1 because for ocult forces the command was thinking that it was running
     -- interactively
-    local ls = io.popen("ls --group-directories-first -F -A -1 " .. dir)
+    local ls = io.popen("ls --group-directories-first -F -A -1 '" .. dir .. "'")
     local subtree = {}
 
     for entry in ls:lines() do
-        local class = "file"
-        local sufix = string.sub(entry, entry:len())
+        local class    = "file"
+        local realname = entry
+        local sufix    = string.sub(realname, -1)
         if sufix == "/" then
             class = "dir"
         elseif sufix == "*" then
@@ -141,7 +153,12 @@ M._create_subtree_from_dir = function(dir) -- {{{
         elseif sufix == "@" then
             class = "link"
         end
-        table.insert(subtree, new_entry(entry, class))
+
+        if string.find("*/=>@|", sufix) then
+            realname = string.sub(realname, 1, -2)
+        end
+
+        table.insert(subtree, new_entry(realname, class))
     end
 
     return subtree
@@ -151,12 +168,15 @@ M._iterate_to_n_entry = function(cur, exp, subtree, fullpath) -- {{{
 
     for _, entry in pairs(subtree) do
         if cur == exp then
-            return cur, entry, fullpath .. entry.name
+            return cur, entry, fullpath .. "/" .. entry.name
         end
 
         cur = cur + 1
         if entry.class == "dir" and entry.opened then
-            cur, entry, new_full_path = M._iterate_to_n_entry(cur, exp, entry.children, fullpath .. entry.name)
+            cur, entry, new_full_path = M._iterate_to_n_entry(cur, 
+                                                              exp, 
+                                                              entry.children, 
+                                                              fullpath .. "/" .. entry.name)
             if entry then
                 return cur, entry, new_full_path
             end
@@ -189,10 +209,11 @@ end -- }}}
 M.get_current_entry = function() -- {{{
     local curpos = vim.fn.getpos('.')[2] - 1
     if curpos == 0 then
-        return nil, nil
+        return nil, M._tree.name
     end
 
-    local cur, entry, fullpath = M._iterate_to_n_entry(1, curpos, M._tree.tree, M._tree.name .. "/")
+    local cur, entry, fullpath = M._iterate_to_n_entry(1, curpos, M._tree.tree, M._tree.name)
+
     return entry, fullpath
 end -- }}}
 
