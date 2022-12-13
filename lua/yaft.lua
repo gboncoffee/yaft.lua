@@ -2,14 +2,6 @@ v = vim.api
 
 local M = {}
 
--- TODO: remove this from here
-vim.cmd [[
-hi! link YaftDir Directory
-hi! link YaftExe Character
-hi! link YaftLnk Question
-hi! link YaftRoot Todo
-]]
-
 -- init plugin {{{
 
 -- entry creator {{{
