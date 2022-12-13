@@ -3,7 +3,6 @@ v = vim.api
 local M = {}
 
 -- TODO: 
--- - Fix cursor jumping when updating the buffer
 -- - Add file and dir touching and deleting
 -- - Confirmation when deleting non-empty dirs with -r and git repos with -rf
 
@@ -84,7 +83,7 @@ M._create_buffer_lines = function(pad, line, subtree) -- {{{
     for _, entry in ipairs(subtree) do
         actually_has_children = true
 
-        vim.fn.appendbufline(M._tree_buffer, line, padstr .. entry.name)
+        v.nvim_buf_set_lines(M._tree_buffer, line, line + 1, false, { padstr .. entry.name })
         line = line + 1
 
         if entry.class == "dir" then
@@ -112,17 +111,14 @@ M._update_buffer = function() -- {{{
 
     -- empty buffer
     v.nvim_buf_set_option(M._tree_buffer, "modifiable", true)
-    v.nvim_buf_set_lines(M._tree_buffer, 0, -1, false, {})
 
     -- add root name
-    vim.fn.appendbufline(M._tree_buffer, 0, M._tree.name)
+    v.nvim_buf_set_lines(M._tree_buffer, 0, 1, false, { M._tree.name })
     v.nvim_buf_add_highlight(M._tree_buffer, -1, "YaftRoot", 0, 0, -1)
 
     -- add other entries
-    M._create_buffer_lines(0, 1, M._tree.tree)
-
-    -- remove the trailing last line
-    v.nvim_buf_set_lines(M._tree_buffer, -2, -1, false, {})
+    local last_line = M._create_buffer_lines(0, 1, M._tree.tree)
+    v.nvim_buf_set_lines(M._tree_buffer, last_line, -1, false, {})
 
     v.nvim_buf_set_option(M._tree_buffer, "modifiable", false)
 end -- }}}
@@ -184,12 +180,6 @@ M._get_first_usable_window = function() -- {{{
     end
 
     return nil
-end -- }}}
-
-M._save_curpos_and_reload = function() -- {{{
-    local curpos = vim.fn.getpos('.')[2]
-    M._update_buffer()
-    vim.cmd("normal " .. curpos .. "G")
 end -- }}}
 
 -- }}}
@@ -270,7 +260,7 @@ M.open = function(entry, fullpath) -- {{{
     if entry.class == "dir" then
         if entry.opened then
             entry.opened = false
-            M._save_curpos_and_reload()
+            M._update_buffer()
             return
         end
 
@@ -278,7 +268,7 @@ M.open = function(entry, fullpath) -- {{{
         if #entry.children == 0 then
             entry.children = M._create_subtree_from_dir(fullpath)
         end
-        M._save_curpos_and_reload()
+        M._update_buffer()
         return
     elseif entry.class == "exe" then
         g._yaft_config.yaft_exe_opener(entry, fullpath)
