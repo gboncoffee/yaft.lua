@@ -3,7 +3,6 @@ v = vim.api
 local M = {}
 
 -- TODO: 
--- - Special case where user is inside empty dir on creation
 -- - Entry deletion
 -- - Confirmation when deleting non-empty dirs with -r and git repos with -rf
 
@@ -174,6 +173,15 @@ M._iterate_to_n_entry = function(cur, exp, subtree, fullpath) -- {{{
 
         cur = cur + 1
         if entry.class == "dir" and entry.opened then
+            if #entry.children == 0 then
+                if cur == exp then
+                    -- .. is a dummy name we'll be using as "the current entry
+                    -- is inside a empty dir"
+                    return cur, nil, fullpath .. "/" .. entry.name .. "/" .. ".."
+                end
+                cur = cur + 1
+                goto continue
+            end
             cur, entry, new_full_path = M._iterate_to_n_entry(cur, 
                                                               exp, 
                                                               entry.children, 
@@ -181,6 +189,7 @@ M._iterate_to_n_entry = function(cur, exp, subtree, fullpath) -- {{{
             if entry then
                 return cur, entry, new_full_path
             end
+            ::continue::
         end
     end
 
@@ -291,6 +300,10 @@ M.default_keys = function() -- {{{
         ["M"]       = M.new_dir,
         ["q"]       = M.toggle_yaft,
         ["<C-r>"]   = M.reload_yaft,
+        ["<C-p>"]   = function() 
+            local _, fullpath = M.get_current_entry()
+            print(fullpath)
+        end,
     }
 end -- }}}
 
@@ -308,6 +321,10 @@ end -- }}}
 
 M.open = function(entry, fullpath) -- {{{
     local entry, fullpath = M.get_current_entry()
+    if not entry then
+        v.nvim_echo({ { "No valid entry selected!", "Error" } }, true, {})
+        return
+    end
 
     if entry.class == "dir" then
         if entry.opened then
@@ -351,7 +368,7 @@ M.new_entry = function(class) -- {{{
 
     local entry, fullpath = M.get_current_entry()
     local dirpath = fullpath
-    if entry ~= nil then
+    if fullpath ~= M._tree.name then
         dirpath = M._get_dir_path_from_fullpath(entry, fullpath)
     end
 
