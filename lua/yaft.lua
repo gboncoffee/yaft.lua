@@ -2,6 +2,11 @@ v = vim.api
 
 local M = {}
 
+-- TODO: 
+-- - Fix cursor jumping when updating the buffer
+-- - Add file and dir touching and deleting
+-- - Confirmation when deleting non-empty dirs with -r and git repos with -rf
+
 -- init plugin {{{
 
 -- entry creator {{{
