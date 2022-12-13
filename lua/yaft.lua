@@ -3,7 +3,8 @@ v = vim.api
 local M = {}
 
 -- TODO: 
--- - Add file and dir touching and deleting
+-- - Special case where user is inside empty dir on creation
+-- - Entry deletion
 -- - Confirmation when deleting non-empty dirs with -r and git repos with -rf
 
 -- init plugin {{{
@@ -202,6 +203,36 @@ M._get_first_usable_window = function() -- {{{
     return nil
 end -- }}}
 
+M._get_dir_path_from_fullpath = function(entry, fullpath) -- {{{
+    local lastslash = 1
+
+    for c = 1, (string.len(fullpath) - 1) do
+        if string.sub(fullpath, c, c) == "/" then
+            lastslash = c
+        end
+    end
+
+    return string.sub(fullpath, 1, lastslash - 1)
+end -- }}}
+
+M._open_file_in_editor = function(fullpath) -- {{{
+    local win = nil
+    local cmd = "edit"
+    if v.nvim_win_is_valid(M._old_window) then
+        win = M._old_window
+    else
+        win = M._get_first_usable_window()
+        if win == nil then
+            win = v.nvim_list_wins()[1]
+            cmd = "split"
+        end
+    end
+
+    v.nvim_win_call(win, function()
+        vim.cmd(cmd .. " " .. fullpath)
+    end)
+end -- }}}
+
 -- }}}
 
 -- api {{{
@@ -296,21 +327,7 @@ M.open = function(entry, fullpath) -- {{{
         return
     end
 
-    local win = nil
-    local cmd = "edit"
-    if v.nvim_win_is_valid(M._old_window) then
-        win = M._old_window
-    else
-        win = M._get_first_usable_window()
-        if win == nil then
-            win = v.nvim_list_wins()[1]
-            cmd = "split"
-        end
-    end
-
-    v.nvim_win_call(win, function()
-        vim.cmd(cmd .. " " .. fullpath)
-    end)
+    M._open_file_in_editor(fullpath)
 end -- }}}
 
 M.delete_entry = function()
@@ -328,12 +345,92 @@ M.chroot_backwards = function()
     print "TODO! Not implemented yet"
 end
 
+M.new_entry = function(class) -- {{{
+
+    if not class then class = "file" end
+
+    local entry, fullpath = M.get_current_entry()
+    local dirpath = fullpath
+    if entry ~= nil then
+        dirpath = M._get_dir_path_from_fullpath(entry, fullpath)
+    end
+
+    local prompt = "New file: "
+    if class == "dir" then
+        prompt = "New dir: "
+    end
+
+    vim.fn.inputsave()
+    local new_file = vim.fn.input(prompt .. string.gsub(dirpath, os.getenv("HOME"), "~") .. "/",
+                                  "",
+                                  "file")
+    vim.fn.inputrestore()
+
+    if new_file == "" then
+        return
+    elseif string.find(new_file, "/") then
+        v.nvim_echo({ { "Linux files can't contain slashes!", "Error" } }, true, {})
+        return
+    end
+
+    -- find where, relatively from root, we should add the entry
+
+    new_file = dirpath .. "/" .. new_file
+
+    if io.open(new_file, "r") ~= nil then
+        v.nvim_echo({ { "File/dir already exists!", "Error" } }, true, {})
+        return
+    end
+
+    local new_path = new_file -- will be used to open the file
+    new_file = string.sub(string.gsub(new_file, M._tree.name, ""), 2)
+
+    local dirs = {}
+    local last = 1
+    while true do
+        local idx = string.find(new_file, "/")
+        if not idx then
+            break
+        end
+        table.insert(dirs, string.sub(new_file, 1, idx - 1))
+        new_file = string.sub(new_file, idx + 1)
+    end
+
+    -- get the entry relatively to that
+    local subtree = M._tree.tree
+    local entry   = nil
+    for _, dir in ipairs(dirs) do
+        for _, inentry in ipairs(subtree) do
+            if inentry.name == dir then
+                subtree = inentry.children
+                entry   = inentry
+                break
+            end
+        end
+    end
+
+    -- finally create the entry in the fs and reload it's dir
+    if class == "dir" then
+        os.execute("mkdir " .. new_path)
+    else
+        os.execute("touch " .. new_path)
+        M._open_file_in_editor(new_path)
+    end
+
+    if entry then
+        entry.children = M._create_subtree_from_dir(dirpath)
+    else
+        M._tree.tree = M._create_subtree_from_dir(dirpath)
+    end
+    M._update_buffer()
+end -- }}}
+
 M.new_file = function()
-    print "TODO! Not implemented yet"
+    M.new_entry("file")
 end
 
 M.new_dir = function()
-    print "TODO! Not implemented yet"
+    M.new_entry("dir")
 end
 
 -- }}}
