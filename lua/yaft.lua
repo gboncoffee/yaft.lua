@@ -160,14 +160,14 @@ M._iterate_to_n_entry = function(cur, exp, subtree, fullpath) -- {{{
 
         cur = cur + 1
         if entry.class == "dir" and entry.opened then
-            cur, entry, fullpath = M._iterate_to_n_entry(cur, exp, entry.children, fullpath .. entry.name)
+            cur, entry, new_full_path = M._iterate_to_n_entry(cur, exp, entry.children, fullpath .. entry.name)
             if entry then
-                return cur, entry, fullpath
+                return cur, entry, new_full_path
             end
         end
     end
 
-    return cur, nil, nil
+    return cur, nil, fullpath
 end -- }}}
 
 M._get_first_usable_window = function() -- {{{
