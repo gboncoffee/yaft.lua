@@ -181,6 +181,12 @@ M._get_first_usable_window = function() -- {{{
     return nil
 end -- }}}
 
+M._save_curpos_and_reload = function() -- {{{
+    local curpos = vim.fn.getpos('.')[2]
+    M._update_buffer()
+    vim.cmd("normal " .. curpos .. "G")
+end -- }}}
+
 -- }}}
 
 -- api {{{
@@ -252,15 +258,13 @@ M.setup = function(config) -- {{{
     end
 end -- }}}
 
-M.open = function() -- {{{
+M.open = function(entry, fullpath) -- {{{
     local entry, fullpath = M.get_current_entry()
 
     if entry.class == "dir" then
         if entry.opened then
             entry.opened = false
-            local curpos = vim.fn.getpos('.')[2]
-            M._update_buffer()
-            vim.cmd("normal " .. curpos .. "G")
+            M._save_curpos_and_reload()
             return
         end
 
@@ -268,9 +272,10 @@ M.open = function() -- {{{
         if #entry.children == 0 then
             entry.children = M._create_subtree_from_dir(fullpath)
         end
-        local curpos = vim.fn.getpos('.')[2]
-        M._update_buffer()
-        vim.cmd("normal " .. curpos .. "G")
+        M._save_curpos_and_reload()
+        return
+    elseif entry.class == "exe" then
+        g._yaft_config.yaft_exe_opener(entry, fullpath)
         return
     end
 
