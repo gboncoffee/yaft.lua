@@ -19,13 +19,14 @@ local new_entry = function(name, class)
 end -- }}}
 
 M._tree = {}
+M._keys = {}
 
 -- }}}
 
 -- low level plugin {{{
 
 M._setup_buffer_keys = function() -- {{{
-    for key,func in pairs(M._keys) do
+    for key, func in pairs(vim.g._yaft_config.keys) do
         vim.keymap.set("n", key, func, { buffer = M._tree_buffer })
     end
 end -- }}}
@@ -239,10 +240,15 @@ M.default_keys = function() -- {{{
     }
 end -- }}}
 
-M.setup_keys = function(keys) -- {{{
-    if not M._keys then M._keys = {} end
-    for key, func in pairs(keys) do
-        M._keys[key] = func
+M.setup = function(config) -- {{{
+    for key, value in config do
+        if key == "keys" then
+            for kei, func in key do
+                key[kei] = func
+            end
+            return
+        end
+        vim.g._yaft_config[key] = value
     end
 end -- }}}
 
