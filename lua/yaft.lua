@@ -258,7 +258,21 @@ M.open = function() -- {{{
     local entry, fullpath = M.get_current_entry()
 
     if entry.class == "dir" then
-        print "TODO! Not implemented yet: DIR OPEN"
+        if entry.opened then
+            entry.opened = false
+            local curpos = vim.fn.getpos('.')[2]
+            M._update_buffer()
+            vim.cmd("normal " .. curpos .. "G")
+            return
+        end
+
+        entry.opened = true
+        if #entry.children == 0 then
+            entry.children = M._create_subtree_from_dir(fullpath)
+        end
+        local curpos = vim.fn.getpos('.')[2]
+        M._update_buffer()
+        vim.cmd("normal " .. curpos .. "G")
         return
     end
 
