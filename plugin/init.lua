@@ -36,9 +36,3 @@ end, {
     complete = "file",
     nargs = "*",
 })
-command("YaftReload", function(args)
-    require "yaft".reload_yaft(args.args)
-end, {
-    complete = "file",
-    nargs = "*",
-})

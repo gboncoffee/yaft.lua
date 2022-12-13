@@ -248,6 +248,7 @@ M.default_keys = function() -- {{{
         ["m"]       = M.new_file,
         ["M"]       = M.new_dir,
         ["q"]       = M.toggle_yaft,
+        ["<C-r>"]   = M.reload_yaft,
     }
 end -- }}}
 
