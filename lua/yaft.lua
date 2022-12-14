@@ -43,8 +43,10 @@ M._ensure_buf_exists = function() -- {{{
     end
 end -- }}}
 
+--@param side (string) "left" or "right"
+--@param width (number) number of columns (yet not implemented, changes nothing)
+--@returns (boolean) true if just opened it, false if it was already opened
 M._open_yaft_window = function(side, width) -- {{{
-    -- returns true if we open it, false if it was already opened
 
     if M._yaft_window and v.nvim_win_is_valid(M._yaft_window) then
         return false
@@ -69,8 +71,14 @@ M._open_yaft_window = function(side, width) -- {{{
     return true
 end -- }}}
 
+-- Writes the lines (i.e. the entries from a subtree) to the plugin buffer.
+-- Recursive.
+--
+--@param pad (number) indentation, i.e., how deep in the subtree it is.
+--@param line (number) next line in the buffer (0-indexed).
+--@param subtree (table) the tree of entries it'll be basing those lines in.
+--@returns (number) next line in the buffer (0-indexed).
 M._create_buffer_lines = function(pad, line, subtree) -- {{{
-    -- recursive because I like recursive things
 
     local padstr = ""
     for i = 0,pad do
@@ -115,6 +123,7 @@ M._create_buffer_lines = function(pad, line, subtree) -- {{{
     return line
 end -- }}}
 
+-- Updates the entire buffer. Don't mind cursor jumping, it'll not.
 M._update_buffer = function() -- {{{
     M._ensure_buf_exists()
 
@@ -134,6 +143,10 @@ M._update_buffer = function() -- {{{
     v.nvim_buf_set_option(M._tree_buffer, "modifiable", false)
 end -- }}}
 
+-- Creates a tree of entries from a directory.
+--
+--@param dir (string) directory to base the subtree in.
+--@returns (table) subtree created.
 M._create_subtree_from_dir = function(dir) -- {{{
     -- -F == append file indicator (*/=>@|)
     -- -A == all without . and ..
@@ -164,17 +177,28 @@ M._create_subtree_from_dir = function(dir) -- {{{
     return subtree
 end -- }}}
 
-M._iterate_to_n_entry = function(cur, exp, subtree, fullpath) -- {{{
+-- The most important function of the module. Traverses a subtree of entries,
+-- counting until it reaches the n entry listed. Recursive.
+--
+--@param cur (number) current entry. When this equals n, it reached the desired
+-- entry.
+--@param n (number) desired entry index.
+--@param subtree (table) tree of entries to traverse.
+--@param fullpath (string) path in which it appends each directory entry path,
+-- to create a full desired entry path.
+--@returns (number, table, string) next entry number, desired entry and desired
+-- entry full path.
+M._iterate_to_n_entry = function(cur, n, subtree, fullpath) -- {{{
 
     for _, entry in pairs(subtree) do
-        if cur == exp then
+        if cur == n then
             return cur, entry, fullpath .. "/" .. entry.name
         end
 
         cur = cur + 1
         if entry.class == "dir" and entry.opened then
             if #entry.children == 0 then
-                if cur == exp then
+                if cur == n then
                     -- .. is a dummy name we'll be using as "the current entry
                     -- is inside a empty dir"
                     return cur, nil, fullpath .. "/" .. entry.name .. "/" .. ".."
@@ -183,7 +207,7 @@ M._iterate_to_n_entry = function(cur, exp, subtree, fullpath) -- {{{
                 goto continue
             end
             cur, entry, new_full_path = M._iterate_to_n_entry(cur, 
-                                                              exp, 
+                                                              n, 
                                                               entry.children, 
                                                               fullpath .. "/" .. entry.name)
             if entry then
@@ -196,6 +220,9 @@ M._iterate_to_n_entry = function(cur, exp, subtree, fullpath) -- {{{
     return cur, nil, fullpath
 end -- }}}
 
+-- Seeks for a window in which to place a buffer.
+--
+--@returns (number) choosen window handler.
 M._get_first_usable_window = function() -- {{{
     -- basically stolen and converted to Lua from the NERDTree ;)
 
@@ -212,7 +239,10 @@ M._get_first_usable_window = function() -- {{{
     return nil
 end -- }}}
 
-M._get_dir_path_from_fullpath = function(entry, fullpath) -- {{{
+-- Gets full parent directory path of an entry.
+--
+--@param fullpath (string) path to return directory of.
+M._get_dir_path_from_fullpath = function(fullpath) -- {{{
     local lastslash = 1
 
     for c = 1, (string.len(fullpath) - 1) do
@@ -224,6 +254,11 @@ M._get_dir_path_from_fullpath = function(entry, fullpath) -- {{{
     return string.sub(fullpath, 1, lastslash - 1)
 end -- }}}
 
+-- Tries to get an usable window with M._get_first_usable_window. If nil,
+-- creates a window by splitting the first one. Uses the choosen window to edit
+-- the file.
+--
+--@param fullpath (string) path to the file to edit.
 M._open_file_in_editor = function(fullpath) -- {{{
     local win = nil
     local cmd = "edit"
@@ -246,6 +281,9 @@ end -- }}}
 
 -- api {{{
 
+-- Gets selected entry.
+--
+--@returns (table, string) entry and entry full path.
 M.get_current_entry = function() -- {{{
     local curpos = vim.fn.getpos('.')[2] - 1
     if curpos == 0 then
@@ -257,6 +295,9 @@ M.get_current_entry = function() -- {{{
     return entry, fullpath
 end -- }}}
 
+-- Completely reloads the tree
+--
+--@param root (string) path to base the tree on.
 M.reload_yaft = function(root) -- {{{
     if (not root)
     or root == ""
@@ -281,6 +322,9 @@ M.reload_yaft = function(root) -- {{{
     end
 end -- }}}
 
+-- Opens or closes the plugin window.
+--
+--@param root (string) path to base the tree on.
 M.toggle_yaft = function(root) -- {{{
     if M._open_yaft_window("right", 20) then
         M.reload_yaft(root)
@@ -319,7 +363,8 @@ M.setup = function(config) -- {{{
     end
 end -- }}}
 
-M.open = function(entry, fullpath) -- {{{
+-- Opens the current entry.
+M.open = function() -- {{{
     local entry, fullpath = M.get_current_entry()
     if not entry then
         v.nvim_echo({ { "No valid entry selected!", "Error" } }, true, {})
@@ -362,6 +407,8 @@ M.chroot_backwards = function()
     print "TODO! Not implemented yet"
 end
 
+-- Creates a new directory or file entry, both in plugin and in filesystem.
+-- Edits a newly created file entry.
 M.new_entry = function(class) -- {{{
 
     if not class then class = "file" end
@@ -369,7 +416,7 @@ M.new_entry = function(class) -- {{{
     local entry, fullpath = M.get_current_entry()
     local dirpath = fullpath
     if fullpath ~= M._tree.name then
-        dirpath = M._get_dir_path_from_fullpath(entry, fullpath)
+        dirpath = M._get_dir_path_from_fullpath(fullpath)
     end
 
     local prompt = "New file: "
