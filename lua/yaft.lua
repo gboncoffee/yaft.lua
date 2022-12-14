@@ -415,12 +415,13 @@ M.setup = function(config) -- {{{
     for key, value in ipairs(config) do
         if key == "keys" then
             for kei, func in key do
-                key[kei] = func
+                g._yaft_config.keys[kei] = func
             end
-            return
+            goto continue
         end
         g._yaft_config[key] = value
     end
+    ::continue::
 end -- }}}
 
 -- Opens the current entry.

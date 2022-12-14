@@ -16,8 +16,9 @@ hi link YaftRoot Todo
 hi link YaftIndent Comment
 ]]
 
--- defaults
-g._yaft_config = {
+if not g._yaft_config then g._yaft_config = {} end
+
+local defaults = {
     yaft_exe_opener = function(entry, fullpath)
         local has_run, run = pcall(require, "run")
         if has_run then
@@ -35,6 +36,20 @@ g._yaft_config = {
     width = 20,
     side = "right"
 }
+for key, value in ipairs(defaults) do
+    if key == "keys" then
+        for kei, func in key do
+            if not g._yaft_config.keys[kei] then
+                g._yaft_config.keys[kei] = func
+            end
+        end
+        goto continue
+    end
+    if not g._yaft_config[key] then
+        g._yaft_config[key] = value
+    end
+    ::continue::
+end
 
 command("YaftToggle", function()
     require "yaft".toggle_yaft()
