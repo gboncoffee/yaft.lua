@@ -733,7 +733,7 @@ M._config = {
     dir_delete_cmd  = "rm -r",
     git_delete_cmd  = "rm -rf",
     keys = M.default_keys(),
-    width = 20,
+    width = 25,
     side = "right"
 }
 
