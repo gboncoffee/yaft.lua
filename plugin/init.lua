@@ -13,6 +13,7 @@ hi link YaftDir Directory
 hi link YaftExe Character
 hi link YaftLink Question
 hi link YaftRoot Todo
+hi link YaftIndent Comment
 ]]
 
 -- defaults

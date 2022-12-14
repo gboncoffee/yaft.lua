@@ -4,6 +4,7 @@ local M = {}
 
 -- TODO: 
 -- - Chroot
+-- - Reload that keeps things opened
 
 -- init plugin {{{
 
@@ -114,6 +115,7 @@ M._create_buffer_lines = function(pad, line, subtree) -- {{{
         line = line + 1
 
         v.nvim_buf_add_highlight(M._tree_buffer, -1, highlight, line - 1, (pad + 1) * 2, -1)
+        v.nvim_buf_add_highlight(M._tree_buffer, -1, "YaftIndent", line - 1, 0, (pad + 1) * 2)
 
         if entry.opened then
             line = M._create_buffer_lines(pad + 1, line, entry.children)
@@ -122,6 +124,7 @@ M._create_buffer_lines = function(pad, line, subtree) -- {{{
 
     if not actually_has_children then
         vim.fn.appendbufline(M._tree_buffer, line, padstr)
+        v.nvim_buf_add_highlight(M._tree_buffer, -1, "YaftIndent", line, 0, (pad + 1) * 2)
         line = line + 1
     end
 
@@ -604,7 +607,7 @@ end -- }}}
 
 -- Runs a shell command inside the selected directory, non-interactively.
 -- Reloads the directory then.
-M.shell = function(cmd)
+M.shell = function(cmd) -- {{{
     local entry, fullpath = M.get_current_entry()
     local dirpath = M._get_dir_path_from_fullpath(fullpath)
 
@@ -637,7 +640,7 @@ M.shell = function(cmd)
         M._tree.tree = M._create_subtree_from_dir(M._tree.name)
     end
     M._update_buffer()
-end
+end -- }}}
 
 M.new_file = function()
     M.new_entry("file")
