@@ -27,6 +27,9 @@ g._yaft_config = {
             vim.cmd("split | term " .. fullpath)
         end)
     end,
+    file_delete_cmd = "rm",
+    dir_delete_cmd  = "rm -r",
+    git_delete_cmd  = "rm -rf",
     keys = require "yaft".default_keys()
 }
 

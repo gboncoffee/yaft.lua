@@ -3,8 +3,6 @@ v = vim.api
 local M = {}
 
 -- TODO: 
--- - Entry deletion
--- - Confirmation when deleting non-empty dirs with -r and git repos with -rf
 -- - Chroot
 
 -- init plugin {{{
@@ -438,10 +436,102 @@ M.open = function() -- {{{
     M._open_file_in_editor(fullpath)
 end -- }}}
 
-M.delete_entry = function()
-    local entry = M.get_current_entry()
-    print "TODO! Not implemented yet"
-end
+-- Deletes the current entry
+M.delete_entry = function() -- {{{
+
+    local entry, fullpath = M.get_current_entry()
+    if not entry then
+        printerr "No valid entry selected!"
+        return
+    end
+
+    local prettypath = string.gsub(fullpath, M._tree.name .. "/", "")
+    local sure = "Y"
+
+    -- files {{{
+    if entry.class ~= "dir" then
+
+        -- confirmation
+        vim.fn.inputsave()
+        sure = vim.fn.input({
+            prompt = "Delete file " .. prettypath .. "? [Y/n] ",
+            cancelreturn = "N"
+        })
+        vim.fn.inputrestore()
+
+        if string.upper(string.sub(sure, 1, 1)) ~= "N" then
+            if os.execute(g._yaft_config.file_delete_cmd .. " " .. fullpath) ~= 0 then
+                printerr("Unable to delete" .. prettypath .. "!")
+                return
+            end
+
+            print("Deleted " .. prettypath)
+
+            local relative_path = string.sub(string.gsub(fullpath, M._tree.name, ""), 2)
+            local entry = M._get_parent_entry_from_fullpath(relative_path, M._tree.tree)
+            local dirpath = M._get_dir_path_from_fullpath(fullpath)
+            if entry then
+                entry.children = M._create_subtree_from_dir(dirpath)
+            else
+                M._tree.tree = M._create_subtree_from_dir(M._tree.name)
+            end
+            M._update_buffer()
+        else
+            print("Cancelling deletion of " .. prettypath)
+        end
+    else -- }}}
+        -- dirs {{{
+        -- check if dir is .git or a git repo
+        local is_git_repo = false
+        local is_git_dir  = false
+        if entry.name == ".git" then
+            is_git_dir = true
+        else
+            local io_stream = io.open(fullpath .. "/.git", "r")
+            if io_stream ~= nil then
+                is_git_repo = true
+                io_stream:close()
+            end
+        end
+
+        -- confirmation
+        local prompt = "Delete "
+        if is_git_dir      then prompt = prompt .. "Git directory "
+        elseif is_git_repo then prompt = prompt .. "Git repo "
+        else                    prompt = prompt .. "directory "
+        end
+
+        vim.fn.inputsave()
+        sure = vim.fn.input({
+            prompt = prompt .. prettypath .. "? [Y/n] ",
+            cancelreturn = "N"
+        })
+        vim.fn.inputrestore()
+
+        -- finally delete
+        if string.upper(string.sub(sure, 1, 1)) ~= "N" then
+            local cmd = g._yaft_config.dir_delete_cmd
+            if is_git_dir or is_git_repo then cmd = g._yaft_config.git_delete_cmd end
+            if os.execute(cmd .. " " .. fullpath) ~= 0 then
+                printerr("Cannot delete " .. prettypath .. "!")
+                return
+            end
+
+            local relative_path = string.sub(string.gsub(fullpath, M._tree.name, ""), 2)
+            local entry = M._get_parent_entry_from_fullpath(relative_path, M._tree.tree)
+            local dirpath = M._get_dir_path_from_fullpath(fullpath)
+            if entry then
+                entry.children = M._create_subtree_from_dir(dirpath)
+            else
+                M._tree.tree = M._create_subtree_from_dir(M._tree.name)
+            end
+            print("Deleted " .. prettypath)
+            M._update_buffer()
+        else
+            print("Cancelling deletion of " .. prettypath)
+        end
+    end -- }}}
+end -- }}}
 
 M.chroot_or_open = function()
     local entry = M.get_current_entry()
