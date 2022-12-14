@@ -299,13 +299,6 @@ end -- }}}
 --
 --@param root (string) path to base the tree on.
 M.reload_yaft = function(root) -- {{{
-    if (not root)
-    or root == ""
-    or root == "."
-    then
-        root = vim.fn.getcwd()
-    end
-
     -- recreates the root, adding name and then creating the tree itself
     M._tree.name = root
     M._tree.tree = M._create_subtree_from_dir(M._tree.name)
@@ -326,8 +319,20 @@ end -- }}}
 --
 --@param root (string) path to base the tree on.
 M.toggle_yaft = function(root) -- {{{
+
+    if (not root)
+    or root == ""
+    or root == "."
+    then
+        root = vim.fn.getcwd()
+    end
+
     if M._open_yaft_window("right", 20) then
-        M.reload_yaft(root)
+        if M._tree.name ~= root then
+            M.reload_yaft(root)
+        else
+            M._update_buffer()
+        end
     else
         v.nvim_win_close(M._yaft_window, false)
     end
