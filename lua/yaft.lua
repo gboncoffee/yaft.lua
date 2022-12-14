@@ -413,7 +413,7 @@ M.default_keys = function() -- {{{
 end -- }}}
 
 M.setup = function(config) -- {{{
-    for key, value in config do
+    for key, value in ipairs(config) do
         if key == "keys" then
             for kei, func in key do
                 key[kei] = func
