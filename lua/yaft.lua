@@ -18,7 +18,7 @@ M._keys = {}
 -- (funny history: I could use metatables and stuff to emulate oop, but for
 -- some reason the table entries were messy, so I couldn't do that. but simply
 -- using a helper function like I would do in C)
-local new_entry = function(name, class)
+M._new_entry = function(name, class)
     return {
         name     = name,
         class    = class, -- file, dir, exe, link
@@ -179,7 +179,7 @@ M._create_subtree_from_dir = function(dir) -- {{{
             realname = string.sub(realname, 1, -2)
         end
 
-        table.insert(subtree, new_entry(realname, class))
+        table.insert(subtree, M._new_entry(realname, class))
     end
 
     return subtree
@@ -198,30 +198,25 @@ end -- }}}
 -- entry full path.
 M._iterate_to_n_entry = function(cur, n, subtree, fullpath) -- {{{
 
-    for _, entry in pairs(subtree) do
+    for _, entry in ipairs(subtree) do
+        cur = cur + 1
         if cur == n then
             return cur, entry, fullpath .. "/" .. entry.name
-        end
-
-        cur = cur + 1
-        if entry.class == "dir" and entry.opened then
+        elseif entry.opened then
             if #entry.children == 0 then
-                if cur == n then
-                    -- .. is a dummy name we'll be using as "the current entry
-                    -- is inside a empty dir"
-                    return cur, nil, fullpath .. "/" .. entry.name .. "/" .. ".."
-                end
                 cur = cur + 1
-                goto continue
+                if cur == n then
+                    return cur, nil, fullpath .. "/" .. entry.name .."/.."
+                end
+            else
+                cur, new_entry, new_fullpath = M._iterate_to_n_entry(cur,
+                                                                     n,
+                                                                     entry.children,
+                                                                     fullpath .. "/" .. entry.name)
+                if cur == n then
+                    return cur, new_entry, new_fullpath
+                end
             end
-            cur, entry, new_full_path = M._iterate_to_n_entry(cur, 
-                                                              n, 
-                                                              entry.children, 
-                                                              fullpath .. "/" .. entry.name)
-            if cur == n then
-                return cur, entry, new_full_path
-            end
-            ::continue::
         end
     end
 
@@ -330,7 +325,7 @@ M.get_current_entry = function() -- {{{
         return nil, M._tree.name .. "/.." -- used as dummy name because it's impossible
     end
 
-    local cur, entry, fullpath = M._iterate_to_n_entry(1, curpos, M._tree.tree, M._tree.name)
+    local cur, entry, fullpath = M._iterate_to_n_entry(0, curpos, M._tree.tree, M._tree.name)
 
     return entry, fullpath
 end -- }}}
