@@ -2,13 +2,6 @@ v = vim.api
 
 local M = {}
 
--- init plugin {{{
-
-M._tree = {}
-M._keys = {}
-
--- }}}
-
 -- utils {{{
 -- entry creator {{{
 -- (funny history: I could use metatables and stuff to emulate oop, but for
@@ -32,7 +25,7 @@ end
 -- low level plugin {{{
 
 M._setup_buffer_keys = function() -- {{{
-    for key, func in pairs(vim.g._yaft_config.keys) do
+    for key, func in pairs(M._config.keys) do
         vim.keymap.set("n", key, func, { buffer = M._tree_buffer })
     end
 end -- }}}
@@ -56,8 +49,8 @@ M._open_yaft_window = function() -- {{{
     M._ensure_buf_exists()
 
     local col = 0
-    if g._yaft_config.side == "right" then
-        col = math.ceil(vim.o.columns - g._yaft_config.width)
+    if M._config.side == "right" then
+        col = math.ceil(vim.o.columns - M._config.width)
     end
 
     M._old_window  = v.nvim_get_current_win()
@@ -65,7 +58,7 @@ M._open_yaft_window = function() -- {{{
         relative = "editor",
         col      = col,
         row      = 0,
-        width    = g._yaft_config.width,
+        width    = M._config.width,
         height   = vim.o.lines,
     })
 
@@ -381,7 +374,7 @@ end -- }}}
 --@param root (string) path to base the tree on.
 M.toggle_yaft = function() -- {{{
 
-    if M._open_yaft_window("right", g._yaft_config.width) then
+    if M._open_yaft_window("right", M._config.width) then
         if M._tree.name ~= vim.fn.getcwd() then
             M.reload_yaft()
         else
@@ -392,34 +385,17 @@ M.toggle_yaft = function() -- {{{
     end
 end -- }}}
 
-M.default_keys = function() -- {{{
-    return {
-        ["<BS>"]    = M.delete_entry,
-        ["<CR>"]    = M.open,
-        ["<Space>"] = M.open,
-        ["l"]       = M.chroot_or_open,
-        ["h"]       = M.chroot_backwards,
-        ["m"]       = M.new_file,
-        ["M"]       = M.new_dir,
-        ["$"]       = M.shell,
-        ["q"]       = M.toggle_yaft,
-        ["<C-r>"]   = M.reload_yaft,
-        ["<C-p>"]   = function() 
-            local _, fullpath = M.get_current_entry()
-            print(fullpath)
-        end,
-    }
-end -- }}}
-
 M.setup = function(config) -- {{{
-    for key, value in ipairs(config) do
+    if not M._config then M._config = { keys = {} } end
+    if not M._config.keys then M._config.keys = {} end
+    for key, value in pairs(config) do
         if key == "keys" then
             for kei, func in key do
-                g._yaft_config.keys[kei] = func
+                M._config.keys[kei] = func
             end
             goto continue
         end
-        g._yaft_config[key] = value
+        M._config[key] = value
     end
     ::continue::
 end -- }}}
@@ -448,7 +424,7 @@ M.open = function(entry, fullpath) -- {{{
         M._update_buffer()
         return
     elseif entry.class == "exe" then
-        g._yaft_config.yaft_exe_opener(entry, fullpath)
+        M._config.yaft_exe_opener(entry, fullpath)
         return
     end
 
@@ -479,7 +455,7 @@ M.delete_entry = function() -- {{{
         vim.fn.inputrestore()
 
         if string.upper(string.sub(sure, 1, 1)) ~= "N" then
-            if os.execute(g._yaft_config.file_delete_cmd .. " " .. fullpath) ~= 0 then
+            if os.execute(M._config.file_delete_cmd .. " " .. fullpath) ~= 0 then
                 printerr("Unable to delete" .. prettypath .. "!")
                 return
             end
@@ -529,8 +505,8 @@ M.delete_entry = function() -- {{{
 
         -- finally delete
         if string.upper(string.sub(sure, 1, 1)) ~= "N" then
-            local cmd = g._yaft_config.dir_delete_cmd
-            if is_git_dir or is_git_repo then cmd = g._yaft_config.git_delete_cmd end
+            local cmd = M._config.dir_delete_cmd
+            if is_git_dir or is_git_repo then cmd = M._config.git_delete_cmd end
             if os.execute(cmd .. " " .. fullpath) ~= 0 then
                 printerr("Cannot delete " .. prettypath .. "!")
                 return
@@ -716,6 +692,50 @@ end
 M.new_dir = function()
     M.new_entry("dir")
 end
+
+-- }}}
+
+-- init plugin {{{
+
+M.default_keys = function() -- {{{
+    return {
+        ["<BS>"]    = M.delete_entry,
+        ["<CR>"]    = M.open,
+        ["<Space>"] = M.open,
+        ["l"]       = M.chroot_or_open,
+        ["h"]       = M.chroot_backwards,
+        ["m"]       = M.new_file,
+        ["M"]       = M.new_dir,
+        ["$"]       = M.shell,
+        ["q"]       = M.toggle_yaft,
+        ["<C-r>"]   = M.reload_yaft,
+        ["<C-p>"]   = function() 
+            local _, fullpath = M.get_current_entry()
+            print(fullpath)
+        end,
+    }
+end -- }}}
+
+M._tree = {}
+M._keys = {}
+M._config = {
+    yaft_exe_opener = function(entry, fullpath)
+        local has_run, run = pcall(require, "run")
+        if has_run then
+            run.run(fullpath)
+            return
+        end
+        v.nvim_win_call(require "yaft"._get_first_usable_window(), function()
+            vim.cmd("split | term " .. fullpath)
+        end)
+    end,
+    file_delete_cmd = "rm",
+    dir_delete_cmd  = "rm -r",
+    git_delete_cmd  = "rm -rf",
+    keys = M.default_keys(),
+    width = 20,
+    side = "right"
+}
 
 -- }}}
 
