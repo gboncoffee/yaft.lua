@@ -2,9 +2,6 @@ v = vim.api
 
 local M = {}
 
--- TODO: 
--- - Chroot
-
 -- init plugin {{{
 
 M._tree = {}
@@ -328,6 +325,21 @@ M._open_file_in_editor = function(fullpath) -- {{{
     end)
 end -- }}}
 
+-- Gets base entry name from a full path.
+--
+--@param fullpath (string) self-explanatory.
+--@returns (string) self-explanatory.
+M._get_base_name_from_fullpath = function(fullpath) -- {{{
+    while true do
+        local idx = string.find(fullpath, "/")
+        if idx then
+            fullpath = string.sub(fullpath, idx + 1, -1)
+        else
+            return fullpath
+        end
+    end
+end -- }}}
+
 -- }}}
 
 -- api {{{
@@ -413,8 +425,10 @@ M.setup = function(config) -- {{{
 end -- }}}
 
 -- Opens the current entry.
-M.open = function() -- {{{
-    local entry, fullpath = M.get_current_entry()
+M.open = function(entry, fullpath) -- {{{
+    if not entry then
+        entry, fullpath = M.get_current_entry()
+    end
     if not entry then
         printerr "No valid entry selected!"
         return
@@ -538,15 +552,57 @@ M.delete_entry = function() -- {{{
     end -- }}}
 end -- }}}
 
-M.chroot_or_open = function()
-    local entry = M.get_current_entry()
-    print "TODO! Not implemented yet"
-end
+M.chroot_or_open = function() -- {{{
+    local entry, fullpath = M.get_current_entry()
 
-M.chroot_backwards = function()
-    local entry = M.get_current_entry()
-    print "TODO! Not implemented yet"
-end
+    if entry.class ~= "dir" then
+        M.open(entry, fullpath)
+        return
+    end
+
+    local old_dir = vim.fn.chdir(fullpath)
+    if old_dir == "" then
+        local prettypath = string.gsub(fullpath, M._tree.name, "")
+        printerr("Unable to change directory to " .. prettypath .. "!")
+        return
+    end
+
+    M._tree.name = fullpath
+    if #entry.children == 0 then
+        M._tree.tree = M._create_subtree_from_dir(fullpath)
+    else
+        M._tree.tree = entry.children
+    end
+    M._update_buffer()
+    vim.cmd("normal gg")
+end -- }}}
+
+M.chroot_backwards = function() -- {{{
+    local old_dir = vim.fn.chdir("..")
+    if old_dir == "" then
+        printerr("Unable to change directory to ..!")
+        return
+    end
+
+    local old_subtree = M._tree.tree
+    local old_name = M._get_base_name_from_fullpath(M._tree.name)
+    -- from reload yaft
+    M._tree.name = vim.fn.getcwd()
+    M._tree.tree = M._create_subtree_from_dir(M._tree.name)
+
+    for idx, entry in ipairs(M._tree.tree) do
+        if entry.name == old_name then
+            M._tree.tree[idx].children = old_subtree
+            M._tree.tree[idx].opened = true
+        end
+    end
+
+    M._update_buffer()
+    -- this gambiarra places the cursor on the last root
+    vim.cmd("normal gg")
+    vim.cmd("/| " .. old_name .. "/")
+    vim.cmd("nohl")
+end -- }}}
 
 -- Creates a new directory or file entry, both in plugin and in filesystem.
 -- Edits a newly created file entry.
