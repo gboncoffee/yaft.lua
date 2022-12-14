@@ -9,6 +9,12 @@ local M = {}
 
 -- init plugin {{{
 
+M._tree = {}
+M._keys = {}
+
+-- }}}
+
+-- utils {{{
 -- entry creator {{{
 -- (funny history: I could use metatables and stuff to emulate oop, but for
 -- some reason the table entries were messy, so I couldn't do that. but simply
@@ -23,9 +29,9 @@ local new_entry = function(name, class)
     }
 end -- }}}
 
-M._tree = {}
-M._keys = {}
-
+local printerr = function(msg)
+    v.nvim_echo({ { msg, "Error" } }, true, {})
+end
 -- }}}
 
 -- low level plugin {{{
@@ -407,7 +413,7 @@ end -- }}}
 M.open = function() -- {{{
     local entry, fullpath = M.get_current_entry()
     if not entry then
-        v.nvim_echo({ { "No valid entry selected!", "Error" } }, true, {})
+        printerr "No valid entry selected!"
         return
     end
 
@@ -476,14 +482,16 @@ M.new_entry = function(class) -- {{{
     if new_path == "" then
         return
     elseif string.find(new_path, "/") then
-        v.nvim_echo({ { "Linux files can't contain slashes!", "Error" } }, true, {})
+        printerr "Linux files can't contain slashes!"
         return
     end
 
     new_path = dirpath .. "/" .. new_path
 
-    if io.open(new_path, "r") ~= nil then
-        v.nvim_echo({ { "File/dir already exists!", "Error" } }, true, {})
+    local io_stream = io.open(new_path, "r")
+    if io_stream ~= nil then
+        printerr "File/dir already exists!"
+        io_stream:close()
         return
     end
 
@@ -493,9 +501,15 @@ M.new_entry = function(class) -- {{{
 
     -- finally create the entry in the fs and reload it's dir
     if class == "dir" then
-        os.execute("mkdir " .. new_path)
+        if os.execute("mkdir " .. new_path) ~= 0 then
+            printerr("Unable to create directory " .. new_path .. "!")
+            return
+        end
     else
-        os.execute("touch " .. new_path)
+        if os.execute("touch " .. new_path) ~= 0 then
+            printerr("Unable to create file " .. new_path .. "!")
+            return
+        end
         M._open_file_in_editor(new_path)
     end
 
