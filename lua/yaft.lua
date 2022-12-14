@@ -4,7 +4,6 @@ local M = {}
 
 -- TODO: 
 -- - Chroot
--- - Reload that keeps things opened
 
 -- init plugin {{{
 
@@ -154,8 +153,10 @@ end -- }}}
 -- Creates a tree of entries from a directory.
 --
 --@param dir (string) directory to base the subtree in.
+--@param old (table) old subtree. If exists, will get already opened dirs and
+-- substitute then.
 --@returns (table) subtree created.
-M._create_subtree_from_dir = function(dir) -- {{{
+M._create_subtree_from_dir = function(dir, old) -- {{{
     -- -F == append file indicator (*/=>@|)
     -- -A == all without . and ..
     -- -1 because for ocult forces the command was thinking that it was running
@@ -180,6 +181,21 @@ M._create_subtree_from_dir = function(dir) -- {{{
         end
 
         table.insert(subtree, M._new_entry(realname, class))
+    end
+
+    if old then
+        for _, old_entry in ipairs(old) do
+            if old_entry.opened then
+                for idx, new_entry in ipairs(subtree) do
+                    if new_entry.name == old_entry.name then
+                        subtree[idx] = old_entry
+                        subtree[idx].children = M._create_subtree_from_dir(
+                                                dir .. "/" .. subtree[idx].name,
+                                                subtree[idx].children)
+                    end
+                end
+            end
+        end
     end
 
     return subtree
@@ -460,9 +476,9 @@ M.delete_entry = function() -- {{{
             local entry = M._get_parent_entry_from_fullpath(relative_path, M._tree.tree)
             local dirpath = M._get_dir_path_from_fullpath(fullpath)
             if entry then
-                entry.children = M._create_subtree_from_dir(dirpath)
+                entry.children = M._create_subtree_from_dir(dirpath, entry.children)
             else
-                M._tree.tree = M._create_subtree_from_dir(M._tree.name)
+                M._tree.tree = M._create_subtree_from_dir(M._tree.name, M._tree.tree)
             end
             M._update_buffer()
         else
@@ -510,9 +526,9 @@ M.delete_entry = function() -- {{{
             local entry = M._get_parent_entry_from_fullpath(relative_path, M._tree.tree)
             local dirpath = M._get_dir_path_from_fullpath(fullpath)
             if entry then
-                entry.children = M._create_subtree_from_dir(dirpath)
+                entry.children = M._create_subtree_from_dir(dirpath, entry.children)
             else
-                M._tree.tree = M._create_subtree_from_dir(M._tree.name)
+                M._tree.tree = M._create_subtree_from_dir(M._tree.name, M._tree.tree)
             end
             print("Deleted " .. prettypath)
             M._update_buffer()
@@ -593,9 +609,9 @@ M.new_entry = function(class) -- {{{
     end
 
     if entry then
-        entry.children = M._create_subtree_from_dir(dirpath)
+        entry.children = M._create_subtree_from_dir(dirpath, entry.children)
     else
-        M._tree.tree = M._create_subtree_from_dir(M._tree.name)
+        M._tree.tree = M._create_subtree_from_dir(M._tree.name, M._tree.tree)
     end
     M._update_buffer()
 end -- }}}
@@ -630,9 +646,9 @@ M.shell = function(cmd) -- {{{
     local entry = M._get_parent_entry_from_fullpath(relative_path, M._tree.tree)
 
     if entry then
-        entry.children = M._create_subtree_from_dir(dirpath)
+        entry.children = M._create_subtree_from_dir(dirpath, entry.children)
     else
-        M._tree.tree = M._create_subtree_from_dir(M._tree.name)
+        M._tree.tree = M._create_subtree_from_dir(M._tree.name, M._tree.tree)
     end
     M._update_buffer()
 end -- }}}
