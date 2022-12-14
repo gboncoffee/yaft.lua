@@ -215,7 +215,7 @@ M._iterate_to_n_entry = function(cur, n, subtree, fullpath) -- {{{
                                                               n, 
                                                               entry.children, 
                                                               fullpath .. "/" .. entry.name)
-            if entry then
+            if cur == n then
                 return cur, entry, new_full_path
             end
             ::continue::
@@ -324,7 +324,7 @@ end -- }}}
 M.get_current_entry = function() -- {{{
     local curpos = vim.fn.getpos('.')[2] - 1
     if curpos == 0 then
-        return nil, M._tree.name
+        return nil, M._tree.name .. "/.." -- used as dummy name because it's impossible
     end
 
     local cur, entry, fullpath = M._iterate_to_n_entry(1, curpos, M._tree.tree, M._tree.name)
