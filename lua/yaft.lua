@@ -45,9 +45,9 @@ M._ensure_buf_exists = function() -- {{{
     end
 end -- }}}
 
---@param side (string) "left" or "right"
---@param width (number) number of columns (yet not implemented, changes nothing)
---@returns (boolean) true if just opened it, false if it was already opened
+--@param side (string) "left" or "right".
+--@param width (number) number of columns.
+--@returns (boolean) true if just opened it, false if it was already opened.
 M._open_yaft_window = function(side, width) -- {{{
 
     if M._yaft_window and v.nvim_win_is_valid(M._yaft_window) then
@@ -58,7 +58,7 @@ M._open_yaft_window = function(side, width) -- {{{
 
     local col = 0
     if side == "right" then
-        col = math.ceil(vim.o.columns - 20)
+        col = math.ceil(vim.o.columns - width)
     end
 
     M._old_window  = v.nvim_get_current_win()
@@ -342,7 +342,7 @@ end -- }}}
 
 -- }}}
 
--- api {{{
+-- api {{{.
 
 -- Gets selected entry.
 --
@@ -382,7 +382,7 @@ end -- }}}
 --@param root (string) path to base the tree on.
 M.toggle_yaft = function() -- {{{
 
-    if M._open_yaft_window("right", 20) then
+    if M._open_yaft_window("right", g._yaft_config.width) then
         if M._tree.name ~= vim.fn.getcwd() then
             M.reload_yaft()
         else
