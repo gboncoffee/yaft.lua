@@ -376,6 +376,7 @@ M.default_keys = function() -- {{{
         ["h"]       = M.chroot_backwards,
         ["m"]       = M.new_file,
         ["M"]       = M.new_dir,
+        ["$"]       = M.shell,
         ["q"]       = M.toggle_yaft,
         ["<C-r>"]   = M.reload_yaft,
         ["<C-p>"]   = function() 
@@ -601,10 +602,42 @@ M.new_entry = function(class) -- {{{
     M._update_buffer()
 end -- }}}
 
--- Runs a shell command inside the selected directory
+-- Runs a shell command inside the selected directory, non-interactively.
+-- Reloads the directory then.
 M.shell = function(cmd)
-    
-en
+    local entry, fullpath = M.get_current_entry()
+    local dirpath = M._get_dir_path_from_fullpath(fullpath)
+
+    if (not cmd) or cmd == "" then
+        local prettydirpath = string.gsub(dirpath, M._tree.name, "")
+        vim.fn.inputsave()
+        if string.len(prettydirpath) > 0 then
+            cmd = vim.fn.input(prettydirpath .. " $ ")
+        else
+            cmd = vim.fn.input("$ ")
+        end
+        vim.fn.inputrestore()
+    end
+
+    if cmd == "" then
+        return
+    end
+
+    local savepath = vim.fn.getcwd()
+    vim.cmd("cd " .. dirpath)
+    vim.cmd("!" .. cmd)
+    vim.cmd("cd " .. savepath)
+
+    local relative_path = string.sub(string.gsub(fullpath, M._tree.name, ""), 2)
+    local entry = M._get_parent_entry_from_fullpath(relative_path, M._tree.tree)
+
+    if entry then
+        entry.children = M._create_subtree_from_dir(dirpath)
+    else
+        M._tree.tree = M._create_subtree_from_dir(M._tree.name)
+    end
+    M._update_buffer()
+end
 
 M.new_file = function()
     M.new_entry("file")
