@@ -5,6 +5,7 @@ local M = {}
 -- TODO: 
 -- - Entry deletion
 -- - Confirmation when deleting non-empty dirs with -r and git repos with -rf
+-- - Chroot
 
 -- init plugin {{{
 
@@ -239,7 +240,7 @@ M._get_first_usable_window = function() -- {{{
     return nil
 end -- }}}
 
--- Gets full parent directory path of an entry.
+-- Gets full parent directory path of another.
 --
 --@param fullpath (string) path to return directory of.
 M._get_dir_path_from_fullpath = function(fullpath) -- {{{
@@ -252,6 +253,38 @@ M._get_dir_path_from_fullpath = function(fullpath) -- {{{
     end
 
     return string.sub(fullpath, 1, lastslash - 1)
+end -- }}}
+
+-- Get parent entry from a full path.
+--
+--@param fullpath (string) full path, relatively to the subtree.
+--@param subtree (table) subtree to search.
+--@returns (table) parent entry, nil if path is children of the subtree.
+M._get_parent_entry_from_fullpath = function(fullpath, subtree) -- {{{
+    local dirs = {}
+    local last = 1
+    while true do
+        local idx = string.find(fullpath, "/")
+        if not idx then
+            break
+        end
+        table.insert(dirs, string.sub(fullpath, 1, idx - 1))
+        fullpath = string.sub(fullpath, idx + 1)
+    end
+
+    local entry   = nil
+    for _, dir in ipairs(dirs) do
+        for _, inentry in ipairs(subtree) do
+            if inentry.name == dir then
+                if not inentry.children then inentry.children = {} end
+                subtree = inentry.children
+                entry   = inentry
+                break
+            end
+        end
+    end
+
+    return entry
 end -- }}}
 
 -- Tries to get an usable window with M._get_first_usable_window. If nil,
@@ -418,65 +451,43 @@ M.new_entry = function(class) -- {{{
 
     if not class then class = "file" end
 
+    -- get entry, fullpath and dirpath
     local entry, fullpath = M.get_current_entry()
     local dirpath = fullpath
     if fullpath ~= M._tree.name then
         dirpath = M._get_dir_path_from_fullpath(fullpath)
     end
 
+    -- prompt for a new name
     local prompt = "New file: "
     if class == "dir" then
         prompt = "New dir: "
     end
 
     vim.fn.inputsave()
-    local new_file = vim.fn.input(prompt .. string.gsub(dirpath, os.getenv("HOME"), "~") .. "/",
+    local new_path = vim.fn.input(prompt .. string.gsub(dirpath, os.getenv("HOME"), "~") .. "/",
                                   "",
                                   "file")
     vim.fn.inputrestore()
 
-    if new_file == "" then
+    -- error handling
+    if new_path == "" then
         return
-    elseif string.find(new_file, "/") then
+    elseif string.find(new_path, "/") then
         v.nvim_echo({ { "Linux files can't contain slashes!", "Error" } }, true, {})
         return
     end
 
-    -- find where, relatively from root, we should add the entry
+    new_path = dirpath .. "/" .. new_path
 
-    new_file = dirpath .. "/" .. new_file
-
-    if io.open(new_file, "r") ~= nil then
+    if io.open(new_path, "r") ~= nil then
         v.nvim_echo({ { "File/dir already exists!", "Error" } }, true, {})
         return
     end
 
-    local new_path = new_file -- will be used to open the file
-    new_file = string.sub(string.gsub(new_file, M._tree.name, ""), 2)
-
-    local dirs = {}
-    local last = 1
-    while true do
-        local idx = string.find(new_file, "/")
-        if not idx then
-            break
-        end
-        table.insert(dirs, string.sub(new_file, 1, idx - 1))
-        new_file = string.sub(new_file, idx + 1)
-    end
-
-    -- get the entry relatively to that
-    local subtree = M._tree.tree
-    local entry   = nil
-    for _, dir in ipairs(dirs) do
-        for _, inentry in ipairs(subtree) do
-            if inentry.name == dir then
-                subtree = inentry.children
-                entry   = inentry
-                break
-            end
-        end
-    end
+    -- get parent entry
+    local relative_path = string.sub(string.gsub(new_path, M._tree.name, ""), 2)
+    local entry = M._get_parent_entry_from_fullpath(relative_path, M._tree.tree)
 
     -- finally create the entry in the fs and reload it's dir
     if class == "dir" then
