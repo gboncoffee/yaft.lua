@@ -46,9 +46,8 @@ M._ensure_buf_exists = function() -- {{{
 end -- }}}
 
 --@param side (string) "left" or "right".
---@param width (number) number of columns.
 --@returns (boolean) true if just opened it, false if it was already opened.
-M._open_yaft_window = function(side, width) -- {{{
+M._open_yaft_window = function() -- {{{
 
     if M._yaft_window and v.nvim_win_is_valid(M._yaft_window) then
         return false
@@ -57,8 +56,8 @@ M._open_yaft_window = function(side, width) -- {{{
     M._ensure_buf_exists()
 
     local col = 0
-    if side == "right" then
-        col = math.ceil(vim.o.columns - width)
+    if g._yaft_config.side == "right" then
+        col = math.ceil(vim.o.columns - g._yaft_config.width)
     end
 
     M._old_window  = v.nvim_get_current_win()
@@ -66,7 +65,7 @@ M._open_yaft_window = function(side, width) -- {{{
         relative = "editor",
         col      = col,
         row      = 0,
-        width    = width,
+        width    = g._yaft_config.width,
         height   = vim.o.lines,
     })
 
@@ -420,7 +419,7 @@ M.setup = function(config) -- {{{
             end
             return
         end
-        vim.g._yaft_config[key] = value
+        g._yaft_config[key] = value
     end
 end -- }}}
 

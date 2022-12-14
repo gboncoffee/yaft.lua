@@ -32,7 +32,8 @@ g._yaft_config = {
     dir_delete_cmd  = "rm -r",
     git_delete_cmd  = "rm -rf",
     keys = require "yaft".default_keys(),
-    width = 20
+    width = 20,
+    side = "right"
 }
 
 command("YaftToggle", function()
