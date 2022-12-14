@@ -516,7 +516,7 @@ M.new_entry = function(class) -- {{{
     if entry then
         entry.children = M._create_subtree_from_dir(dirpath)
     else
-        M._tree.tree = M._create_subtree_from_dir(dirpath)
+        M._tree.tree = M._create_subtree_from_dir(M._tree.name)
     end
     M._update_buffer()
 end -- }}}
