@@ -333,13 +333,10 @@ M.get_current_entry = function() -- {{{
 end -- }}}
 
 -- Completely reloads the tree
---
---@param root (string) path to base the tree on.
-M.reload_yaft = function(root) -- {{{
-    if not root then root = M._tree.name end
+M.reload_yaft = function() -- {{{
 
     -- recreates the root, adding name and then creating the tree itself
-    M._tree.name = root
+    M._tree.name = vim.fn.getcwd()
     M._tree.tree = M._create_subtree_from_dir(M._tree.name)
     M._update_buffer()
 
@@ -357,18 +354,11 @@ end -- }}}
 -- Opens or closes the plugin window.
 --
 --@param root (string) path to base the tree on.
-M.toggle_yaft = function(root) -- {{{
-
-    if (not root)
-    or root == ""
-    or root == "."
-    then
-        root = vim.fn.getcwd()
-    end
+M.toggle_yaft = function() -- {{{
 
     if M._open_yaft_window("right", 20) then
-        if M._tree.name ~= root then
-            M.reload_yaft(root)
+        if M._tree.name ~= vim.fn.getcwd() then
+            M.reload_yaft()
         else
             M._update_buffer()
         end
@@ -610,6 +600,11 @@ M.new_entry = function(class) -- {{{
     end
     M._update_buffer()
 end -- }}}
+
+-- Runs a shell command inside the selected directory
+M.shell = function(cmd)
+    
+en
 
 M.new_file = function()
     M.new_entry("file")

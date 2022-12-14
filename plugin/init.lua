@@ -33,9 +33,6 @@ g._yaft_config = {
     keys = require "yaft".default_keys()
 }
 
-command("YaftToggle", function(args)
-    require "yaft".toggle_yaft(args.args)
-end, {
-    complete = "file",
-    nargs = "*",
-})
+command("YaftToggle", function()
+    require "yaft".toggle_yaft()
+end, {})
