@@ -49,8 +49,10 @@ M._open_yaft_window = function() -- {{{
     M._ensure_buf_exists()
 
     local col = 0
+    local border = { "", "", "│", "│", "╯", "─", "", "" }
     if M._config.side == "right" then
         col = math.ceil(vim.o.columns - M._config.width)
+        border = { "│", "", "", "", "", "─", "╰", "│" }
     end
 
     M._old_window  = v.nvim_get_current_win()
@@ -60,6 +62,7 @@ M._open_yaft_window = function() -- {{{
         row      = 0,
         width    = M._config.width,
         height   = vim.o.lines,
+        border   = border
     })
 
     return true
