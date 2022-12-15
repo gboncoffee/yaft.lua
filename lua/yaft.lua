@@ -455,7 +455,7 @@ M.delete_entry = function() -- {{{
         vim.fn.inputrestore()
 
         if string.upper(string.sub(sure, 1, 1)) ~= "N" then
-            if os.execute(M._config.file_delete_cmd .. " " .. fullpath) ~= 0 then
+            if os.execute(M._config.file_delete_cmd .. " " .. fullpath .. " 2> /dev/null") ~= 0 then
                 printerr("Unable to delete" .. prettypath .. "!")
                 return
             end
@@ -507,7 +507,7 @@ M.delete_entry = function() -- {{{
         if string.upper(string.sub(sure, 1, 1)) ~= "N" then
             local cmd = M._config.dir_delete_cmd
             if is_git_dir or is_git_repo then cmd = M._config.git_delete_cmd end
-            if os.execute(cmd .. " " .. fullpath) ~= 0 then
+            if os.execute(cmd .. " " .. fullpath .. " 2> /dev/null") ~= 0 then
                 printerr("Cannot delete " .. prettypath .. "!")
                 return
             end
@@ -628,12 +628,12 @@ M.new_entry = function(class) -- {{{
 
     -- finally create the entry in the fs and reload it's dir
     if class == "dir" then
-        if os.execute("mkdir " .. new_path) ~= 0 then
+        if os.execute("mkdir " .. new_path .. " 2> /dev/null") ~= 0 then
             printerr("Unable to create directory " .. new_path .. "!")
             return
         end
     else
-        if os.execute("touch " .. new_path) ~= 0 then
+        if os.execute("touch " .. new_path .. " 2> /dev/null") ~= 0 then
             printerr("Unable to create file " .. new_path .. "!")
             return
         end
