@@ -685,6 +685,37 @@ M.shell = function(cmd) -- {{{
     M._update_buffer()
 end -- }}}
 
+-- Move entries inside the tree with mv
+M.move = function() -- {{{
+    local entry, fullpath = M.get_current_entry()
+
+    if not entry then
+        printerr "No valid entry selected!"
+        return
+    end
+
+    local path_without_root = string.gsub(fullpath, M._tree.name .. "/", "")
+
+    vim.fn.inputsave()
+    local new_rel_path = vim.fn.input(
+                         "New path: " .. string.gsub(M._tree.name, os.getenv("HOME"), "~") .. "/",
+                         path_without_root,
+                         "file")
+    vim.fn.inputrestore()
+
+    local new_path = M._tree.name .. "/" .. new_rel_path
+    if os.execute("mv " .. fullpath .. " " .. new_path .. " 2> /dev/null") ~= 0 then
+        printerr("Unable to move " .. path_without_root .. " to " .. new_rel_path .. "!")
+    end
+
+    print("Moved " .. path_without_root .. " to " .. new_rel_path)
+
+    -- we're going to reload the whole tree because most of the time it would be
+    -- faster then if we tried to find the possible two directories to reload
+    M._tree.tree = M._create_subtree_from_dir(M._tree.name, M._tree.tree)
+    M._update_buffer()
+end -- }}}
+
 M.new_file = function()
     M.new_entry("file")
 end
@@ -706,6 +737,7 @@ M.default_keys = function() -- {{{
         ["h"]       = M.chroot_backwards,
         ["m"]       = M.new_file,
         ["M"]       = M.new_dir,
+        ["r"]       = M.move,
         ["$"]       = M.shell,
         ["q"]       = M.toggle_yaft,
         ["<C-r>"]   = M.reload_yaft,
