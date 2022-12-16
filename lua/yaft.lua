@@ -103,6 +103,11 @@ M._create_buffer_lines = function(pad, line, subtree) -- {{{
     -- (so making easy to see that it's actually opened)
     local actually_has_children = false
     for _, entry in ipairs(subtree) do
+
+        if (not M._config.show_hidden) and string.sub(entry.name, 1, 1) == "." then
+            goto continue
+        end
+
         actually_has_children = true
 
         local highlight = ""
@@ -137,6 +142,8 @@ M._create_buffer_lines = function(pad, line, subtree) -- {{{
         if entry.opened then
             line = M._create_buffer_lines(pad + 1, line, entry.children)
         end
+
+        ::continue::
     end
 
     if not actually_has_children then
@@ -219,6 +226,26 @@ M._create_subtree_from_dir = function(dir, old) -- {{{
     return subtree
 end -- }}}
 
+-- Gets number of children of a subtree visible (#subtree if
+-- M._config.show_hidden).
+--
+--@param subtree (table) subtree to count.
+--@returns (number) number of visible children.
+M._get_number_of_visible_children = function(subtree) -- {{{
+    if not subtree then
+        return 0
+    end
+    local n_children = #subtree
+    if not M._config.show_hidden then
+        for _, entry in ipairs(subtree) do
+            if string.sub(entry.name, 1, 1) == "." then
+                n_children = n_children - 1
+            end
+        end
+    end
+    return n_children
+end -- }}}
+
 -- The most important function of the module. Traverses a subtree of entries,
 -- counting until it reaches the n entry listed. Recursive.
 --
@@ -233,11 +260,16 @@ end -- }}}
 M._iterate_to_n_entry = function(cur, n, subtree, fullpath) -- {{{
 
     for _, entry in ipairs(subtree) do
+        if (not M._config.show_hidden) and string.sub(entry.name, 1, 1) == "." then
+            goto continue
+        end
+
         cur = cur + 1
+
         if cur == n then
             return cur, entry, fullpath .. "/" .. entry.name
         elseif entry.opened then
-            if #entry.children == 0 then
+            if M._get_number_of_visible_children(entry.children) == 0 then
                 cur = cur + 1
                 if cur == n then
                     return cur, nil, fullpath .. "/" .. entry.name .."/.."
@@ -252,6 +284,7 @@ M._iterate_to_n_entry = function(cur, n, subtree, fullpath) -- {{{
                 end
             end
         end
+        ::continue::
     end
 
     return cur, nil, fullpath
@@ -745,6 +778,16 @@ M.move = function() -- {{{
     M._update_buffer()
 end -- }}}
 
+-- Toggle hidden entries
+M.toggle_hidden = function()
+    if M._config.show_hidden then
+        M._config.show_hidden = false
+    else
+        M._config.show_hidden = true
+    end
+    M._update_buffer()
+end
+
 M.new_file = function()
     M.new_entry("file")
 end
@@ -757,6 +800,17 @@ end
 
 -- init plugin {{{
 
+M.default_exe_opener = function(entry, fullpath) -- {{{
+    local has_run, run = pcall(require, "run")
+    if has_run then
+        run.run(fullpath)
+        return
+    end
+    v.nvim_win_call(require "yaft"._get_first_usable_window(), function()
+        vim.cmd("split | term " .. fullpath)
+    end)
+end -- }}}
+
 M.default_keys = function() -- {{{
     return {
         ["<BS>"]    = M.delete_entry,
@@ -767,6 +821,7 @@ M.default_keys = function() -- {{{
         ["m"]       = M.new_file,
         ["M"]       = M.new_dir,
         ["r"]       = M.move,
+        ["a"]       = M.toggle_hidden,
         ["$"]       = M.shell,
         ["q"]       = M.toggle_yaft,
         ["<C-r>"]   = M.reload_yaft,
@@ -780,22 +835,14 @@ end -- }}}
 M._tree = {}
 M._keys = {}
 M._config = {
-    yaft_exe_opener = function(entry, fullpath)
-        local has_run, run = pcall(require, "run")
-        if has_run then
-            run.run(fullpath)
-            return
-        end
-        v.nvim_win_call(require "yaft"._get_first_usable_window(), function()
-            vim.cmd("split | term " .. fullpath)
-        end)
-    end,
+    yaft_exe_opener = M.default_exe_opener,
     file_delete_cmd = "rm",
     dir_delete_cmd  = "rm -r",
     git_delete_cmd  = "rm -rf",
-    keys = M.default_keys(),
-    width = 25,
-    side = "right"
+    keys            = M.default_keys(),
+    width           = 25,
+    side            = "right",
+    show_hidden     = true
 }
 
 -- }}}
