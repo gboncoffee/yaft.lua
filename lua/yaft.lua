@@ -20,6 +20,21 @@ end -- }}}
 local printerr = function(msg)
     v.nvim_echo({ { msg, "Error" } }, true, {})
 end
+
+local get_extension = function(filename)
+    local ext = filename
+    local i = nil
+    while true do
+        i = string.find(ext, ".", 1, true)
+        if not i then break end
+        ext = string.sub(ext, i + 1)
+    end
+    if ext ~= filename then
+        return ext
+    end
+    return ""
+end
+
 -- }}}
 
 -- low level plugin {{{
@@ -77,6 +92,8 @@ end -- }}}
 --@returns (number) next line in the buffer (0-indexed).
 M._create_buffer_lines = function(pad, line, subtree) -- {{{
 
+    local has_icons, icons = pcall(require, "nvim-web-devicons")
+
     local padstr = ""
     for i = 0,pad do
         padstr = padstr .. "| "
@@ -90,10 +107,19 @@ M._create_buffer_lines = function(pad, line, subtree) -- {{{
 
         local highlight = ""
         local sufix     = ""
+        local icon      = ""
+        if has_icons then
+            icon = icons.get_icon(entry.name, get_extension(entry.name), { default = true }) .. " "
+        end
 
         if entry.class == "dir" then
             highlight = "YaftDir"
             sufix     = "/"
+            if has_icons then
+                -- hardcoded because I cannot find how to get a directory icon
+                -- with devicons
+                icon = " "
+            end
         elseif entry.class == "exe" then
             highlight = "YaftExe"
             sufix     = "*"
@@ -102,7 +128,7 @@ M._create_buffer_lines = function(pad, line, subtree) -- {{{
             sufix     = "@"
         end
 
-        v.nvim_buf_set_lines(M._tree_buffer, line, line + 1, false, { padstr .. entry.name .. sufix })
+        v.nvim_buf_set_lines(M._tree_buffer, line, line + 1, false, { padstr .. icon .. entry.name .. sufix })
         line = line + 1
 
         v.nvim_buf_add_highlight(M._tree_buffer, -1, highlight, line - 1, (pad + 1) * 2, -1)
