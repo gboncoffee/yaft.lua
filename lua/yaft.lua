@@ -784,6 +784,37 @@ M.move = function() -- {{{
     M._update_buffer()
 end -- }}}
 
+-- Copy entries inside the tree
+M.copy = function() -- {{{
+    local entry, fullpath = M.get_current_entry()
+
+    if not entry then
+        printerr "No valid entry selected!"
+        return
+    end
+
+    local path_without_root = string.gsub(fullpath, M._tree.name .. "/", "")
+
+    vim.fn.inputsave()
+    local copy_rel_path = vim.fn.input(
+                         "Path to copy to: " .. string.gsub(M._tree.name, os.getenv("HOME"), "~") .. "/",
+                         path_without_root,
+                         "file")
+    vim.fn.inputrestore()
+
+    local copy_path = M._tree.name .. "/" .. copy_rel_path
+    if os.execute("cp " .. fullpath .. " " .. copy_path .. " 2> /dev/null") ~= 0 then
+        printerr("Unable to copy " .. path_without_root .. " to " .. copy_rel_path .. "!")
+    end
+
+    print("Moved " .. path_without_root .. " to " .. copy_rel_path)
+
+    -- we're going to reload the whole tree because most of the time it would be
+    -- faster then if we tried to find the possible two directories to reload
+    M._tree.tree = M._create_subtree_from_dir(M._tree.name, M._tree.tree)
+    M._update_buffer()
+end -- }}}
+
 -- Toggle hidden entries
 M.toggle_hidden = function()
     if M._config.show_hidden then
@@ -828,6 +859,7 @@ M.default_keys = function() -- {{{
         ["m"]       = M.new_file,
         ["M"]       = M.new_dir,
         ["r"]       = M.move,
+        ["c"]       = M.copy,
         ["a"]       = M.toggle_hidden,
         ["$"]       = M.shell,
         ["q"]       = M.toggle_yaft,
