@@ -493,6 +493,12 @@ M.open = function(entry, fullpath) -- {{{
     M._open_file_in_editor(fullpath)
 end -- }}}
 
+-- Opens the current entry in editor
+M.edit = function() -- {{{
+    local entry, fullpath = M.get_current_entry()
+    M._open_file_in_editor(fullpath)
+end -- }}}
+
 -- Deletes the current entry
 M.delete_entry = function() -- {{{
 
@@ -816,6 +822,7 @@ M.default_keys = function() -- {{{
         ["<BS>"]    = M.delete_entry,
         ["<CR>"]    = M.open,
         ["<Space>"] = M.open,
+        ["e"]       = M.edit,
         ["l"]       = M.chroot_or_open,
         ["h"]       = M.chroot_backwards,
         ["m"]       = M.new_file,
