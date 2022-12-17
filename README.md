@@ -3,7 +3,7 @@
 Yaft is a simpler take on a tree file explorer. Uses a floating window, so it
 won't get in the way of your editor windows.
 
-Yaft works on Linux and I'm 99% sure it'll work in other *nix OSes like MacOS
+Yaft works on Linux and I'm 99% sure it'll work in other \*nix OSes like MacOS
 and BSDs. Also, I'm 99.99% sure it doesn't work on Microsoft Windows.
 
 Features:  
