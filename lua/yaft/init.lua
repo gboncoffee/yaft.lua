@@ -36,6 +36,9 @@ M.get_current_entry = function()
     local curpos = vim.fn.getpos('.')[2] - 1
     if curpos == 0 then
         return nil, l.tree.name .. "/.." -- used as dummy name because it's impossible
+    -- if tree don't have any children
+    elseif curpos == 1 and #l.tree.tree == 0 then
+        return nil, l.tree.name .. "/.."
     end
 
     local cur, entry, fullpath = l.iterate_to_n_entry(0, curpos, l.tree.tree, l.tree.name)
