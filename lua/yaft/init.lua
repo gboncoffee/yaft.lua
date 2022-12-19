@@ -275,8 +275,13 @@ M.chroot_backwards = function()
 
     l.update_buffer()
     -- this gambiarra places the cursor on the last root
+    local has_icons = pcall(require, "nvim-web-devicons")
+    local icon = ""
+    if has_icons then
+        icon = " "
+    end
     vim.cmd("normal gg")
-    vim.cmd("/| " .. old_name .. "/")
+    vim.cmd("/| " .. icon .. old_name .. "/")
     vim.cmd("nohl")
 end
 
