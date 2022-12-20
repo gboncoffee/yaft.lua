@@ -19,6 +19,7 @@ Features:
   executable files if it is installed.  
 
 TODO:  
+- [ ] Neovim help file
 - [ ] Symlink resolving  
 - [ ] Better API for custom functions  
 
@@ -136,9 +137,9 @@ Most functions would require knowing the current entry and its full path. To do
 that, use the function `get_current_entry()`, that returns a table `entry` and
 a string `fullpath`.
 
-Entry tables are build with this function:
+Entry tables are build with this function, from `yaft.low_level`:
 ```lua
-M._new_entry = function(name, class)
+M.new_entry = function(name, class)
     return {
         name     = name,
         class    = class, -- file, dir, exe, link
