@@ -37,7 +37,7 @@ M.get_current_entry = function()
     if curpos == 0 then
         return nil, l.tree.name .. "/.." -- used as dummy name because it's impossible
     -- if tree don't have any children
-    elseif curpos == 1 and #l.tree.tree == 0 then
+    elseif curpos == 1 and l.get_number_of_visible_children(l.tree.tree) == 0 then
         return nil, l.tree.name .. "/.."
     end
 
@@ -82,14 +82,17 @@ M.toggle_yaft = function()
 end
 
 M.setup = function(config)
+    local c = require "yaft.config"
+    c.init()
+    
     for key, value in pairs(config) do
         if key == "keys" then
             for kei, func in key do
-                g._yaft_config.keys[kei] = func
+                c.config.keys[kei] = func
             end
             goto continue
         end
-        g._yaft_config[key] = value
+        c.config[key] = value
     end
     ::continue::
 end
@@ -454,10 +457,11 @@ end
 
 -- Toggle hidden entries
 M.toggle_hidden = function()
+    local c = require "yaft.config"
     if config("show_hidden") then
-        g._yaft_config.show_hidden = false
+        c.config.show_hidden = false
     else
-        g._yaft_config.show_hidden = true
+        c.config.show_hidden = true
     end
     l.update_buffer()
 end
@@ -476,7 +480,7 @@ M.default_exe_opener = function(entry, fullpath)
         run.run(fullpath)
         return
     end
-    v.nvim_win_call(require "yaft.low_level"._get_first_usable_window(), function()
+    v.nvim_win_call(require "yaft.low_level".get_first_usable_window(), function()
         vim.cmd("split | term " .. fullpath)
     end)
 end

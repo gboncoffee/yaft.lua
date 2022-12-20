@@ -1,4 +1,5 @@
 local M = {}
+local c = require "yaft.config"
 
 M.printerr = function(msg)
     v.nvim_echo({ { msg, "Error" } }, true, {})
@@ -6,9 +7,9 @@ end
 
 M.get_config_key = function(key)
     if not key then
-        return vim.g._yaft_config
+        return c.config
     else
-        return vim.g._yaft_config[key]
+        return c.config[key]
     end
 end
 

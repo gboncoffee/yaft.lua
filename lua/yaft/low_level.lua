@@ -215,7 +215,7 @@ M.get_number_of_visible_children = function(subtree)
         return 0
     end
     local n_children = #subtree
-    if not config("show_hidden ") then
+    if not config("show_hidden") then
         for _, entry in ipairs(subtree) do
             if string.sub(entry.name, 1, 1) == "." then
                 n_children = n_children - 1
