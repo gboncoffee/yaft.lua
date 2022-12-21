@@ -1,6 +1,7 @@
 v = vim.api
 local l = require "yaft.low_level"
 local p = require "yaft.path"
+local y = require "yaft.api"
 local config   = require "yaft.utils".get_config_key
 local printerr = require "yaft.utils".printerr
 
@@ -17,7 +18,7 @@ M.open_file_in_editor = function(fullpath)
     if v.nvim_win_is_valid(l.old_window) then
         win = l.old_window
     else
-        win = l.get_first_usable_window()
+        win = y.get_first_usable_window()
         if win == nil then
             win = v.nvim_list_wins()[1]
             cmd = "split"
@@ -29,29 +30,12 @@ M.open_file_in_editor = function(fullpath)
     end)
 end
 
--- Gets selected entry.
---
---@returns (table, string) entry and entry full path.
-M.get_current_entry = function()
-    local curpos = vim.fn.getpos('.')[2] - 1
-    if curpos == 0 then
-        return nil, l.tree.name .. "/.." -- used as dummy name because it's impossible
-    -- if tree don't have any children
-    elseif curpos == 1 and l.get_number_of_visible_children(l.tree.tree) == 0 then
-        return nil, l.tree.name .. "/.."
-    end
-
-    local cur, entry, fullpath = l.iterate_to_n_entry(0, curpos, l.tree.tree, l.tree.name)
-
-    return entry, fullpath
-end
-
 -- Completely reloads the tree
 M.reload_yaft = function()
 
     -- recreates the root, adding name and then creating the tree itself
     l.tree.name = vim.fn.getcwd()
-    l.tree.tree = l.create_subtree_from_dir(l.tree.name)
+    l.tree.tree = l.create_subtree_from_dir(l.tree.name, l.tree.tree)
     l.update_buffer()
 
     -- make sure we update what the user see too, and go to the first line
@@ -70,7 +54,7 @@ end
 --@param root (string) path to base the tree on.
 M.toggle_yaft = function()
 
-    if l.open_yaft_window("right", config("width")) then
+    if l.open_yaft_window() then
         if l.tree.name ~= vim.fn.getcwd() then
             M.reload_yaft()
         else
@@ -100,7 +84,7 @@ end
 -- Opens the current entry.
 M.open = function(entry, fullpath)
     if not entry then
-        entry, fullpath = M.get_current_entry()
+        entry, fullpath = y.get_current_entry()
     end
     if not entry then
         printerr "No valid entry selected!"
@@ -115,8 +99,8 @@ M.open = function(entry, fullpath)
         end
 
         entry.opened = true
-        if #entry.children == 0 then
-            entry.children = l.create_subtree_from_dir(fullpath)
+        if not entry.checked then
+            y.check_dir(entry, fullpath)
         end
         l.update_buffer()
         return
@@ -128,16 +112,19 @@ M.open = function(entry, fullpath)
     M.open_file_in_editor(fullpath)
 end
 
--- Opens the current entry in editor
+-- Tries to open the current entry in editor (silently fails in case of dir
+-- selected or nil entry).
 M.edit = function()
-    local entry, fullpath = M.get_current_entry()
-    M.open_file_in_editor(fullpath)
+    local entry, fullpath = y.get_current_entry()
+    if entry and entry.class ~= "dir" then
+        M.open_file_in_editor(fullpath)
+    end
 end
 
 -- Deletes the current entry
 M.delete_entry = function()
 
-    local entry, fullpath = M.get_current_entry()
+    local entry, fullpath = y.get_current_entry()
     if not entry then
         printerr "No valid entry selected!"
         return
@@ -232,7 +219,7 @@ M.delete_entry = function()
 end
 
 M.chroot_or_open = function()
-    local entry, fullpath = M.get_current_entry()
+    local entry, fullpath = y.get_current_entry()
 
     if entry.class ~= "dir" then
         M.open(entry, fullpath)
@@ -295,7 +282,7 @@ M.new_entry = function(class)
     if not class then class = "file" end
 
     -- get entry, fullpath and dirpath
-    local entry, fullpath = M.get_current_entry()
+    local entry, fullpath = y.get_current_entry()
     local dirpath = fullpath
     if fullpath ~= l.tree.name then
         dirpath = p.get_dir_path_from_fullpath(fullpath)
@@ -359,7 +346,7 @@ end
 -- Runs a shell command inside the selected directory, non-interactively.
 -- Reloads the directory then.
 M.shell = function(cmd)
-    local entry, fullpath = M.get_current_entry()
+    local entry, fullpath = y.get_current_entry()
     local dirpath = p.get_dir_path_from_fullpath(fullpath)
 
     if (not cmd) or cmd == "" then
@@ -395,7 +382,7 @@ end
 
 -- Move entries inside the tree with mv
 M.move = function()
-    local entry, fullpath = M.get_current_entry()
+    local entry, fullpath = y.get_current_entry()
 
     if not entry then
         printerr "No valid entry selected!"
@@ -426,7 +413,7 @@ end
 
 -- Copy entries inside the tree
 M.copy = function()
-    local entry, fullpath = M.get_current_entry()
+    local entry, fullpath = y.get_current_entry()
 
     if not entry then
         printerr "No valid entry selected!"
@@ -502,7 +489,7 @@ M.default_keys = function()
         ["q"]       = M.toggle_yaft,
         ["<C-r>"]   = M.reload_yaft,
         ["<C-p>"]   = function() 
-            local _, fullpath = M.get_current_entry()
+            local _, fullpath = y.get_current_entry()
             print(fullpath)
         end,
     }

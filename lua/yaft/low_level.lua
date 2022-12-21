@@ -269,25 +269,6 @@ M.iterate_to_n_entry = function(cur, n, subtree, fullpath)
     return cur, nil, fullpath
 end
 
--- Seeks for a window in which to place a buffer.
---
---@returns (number) choosen window handler.
-M.get_first_usable_window = function()
-    -- basically stolen and converted to Lua from the NERDTree ;)
-
-    for _, win in ipairs(v.nvim_list_wins()) do
-        local buf = v.nvim_win_get_buf(win)
-        if v.nvim_buf_get_option(buf, "buftype") == ""
-            and (not v.nvim_win_get_option(win, "previewwindow"))
-            and (not (v.nvim_buf_get_option(buf, "modified") and v.nvim_get_option("hidden")))
-            then
-            return win
-        end
-    end
-
-    return nil
-end
-
 -- Get parent entry from a full path.
 --
 --@param fullpath (string) full path, relatively to the subtree.
