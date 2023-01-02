@@ -30,6 +30,16 @@ M.ensure_buf_exists = function()
         M.tree_buffer = v.nvim_create_buf(false, true)
         M.setup_buffer_keys()
         v.nvim_buf_set_option(M.tree_buffer, "modifiable", false)
+        v.nvim_buf_call(M.tree_buffer, function()
+            vim.cmd [[
+            hi Cursor blend=100
+            set guicursor+=n:Cursor/lCursor
+            au BufEnter <buffer> hi Cursor blend=100
+            au BufEnter <buffer> set guicursor+=n:Cursor/lCursor
+            au BufLeave <buffer> hi Cursor blend=0
+            au BufLeave <buffer> set guicursor-=n:Cursor/lCursor
+            ]]
+        end)
     end
 end
 
@@ -59,6 +69,13 @@ M.open_yaft_window = function()
         height   = vim.o.lines,
         border   = border
     })
+
+    v.nvim_win_call(M.yaft_window, function()
+        vim.cmd [[
+        setlocal cursorline
+        setlocal nocursorcolumn
+        ]]
+    end)
 
     return true
 end
