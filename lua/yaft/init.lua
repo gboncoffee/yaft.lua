@@ -389,7 +389,10 @@ M.move = function()
         return
     end
 
-    local path_without_root = string.gsub(fullpath, l.tree.name .. "/", "")
+    -- I was using string.gsub() but it started to refuse to work when the
+    -- fullpath has some -
+    local root_len = string.len(l.tree.name)
+    local path_without_root = string.sub(fullpath, root_len + 2)
 
     vim.fn.inputsave()
     local new_rel_path = vim.fn.input(
