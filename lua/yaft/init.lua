@@ -206,7 +206,7 @@ M.delete_entry = function()
             local entry = l.get_parent_entry_from_fullpath(relative_path, l.tree.tree)
             local dirpath = p.get_dir_path_from_fullpath(fullpath)
             if entry then
-                entry.children = l._create_subtree_from_dir(dirpath, entry.children)
+                entry.children = l.create_subtree_from_dir(dirpath, entry.children)
             else
                 l.tree.tree = l.create_subtree_from_dir(l.tree.name, l.tree.tree)
             end
